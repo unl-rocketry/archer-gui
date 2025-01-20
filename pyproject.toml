@@ -4,4 +4,8 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "customtkinter>=5.2.2",
+    "pygeomag>=1.1.0",
+    "tkintermapview>=1.29",
+]

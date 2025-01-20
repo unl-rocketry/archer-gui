@@ -1,0 +1,5 @@
+{
+  "exclud": [ ".venv" ],
+  "venvPath": ".",
+  "venv": ".venv"
+}
