@@ -1,5 +1,6 @@
 ## 2025, UNL Aerospace Club
 ## Grant Gardner, Yen Do
+## Licensed under the GNU General Public License version 3
 #
 # Program to calculate angles for a dish given two GPS coordinates
 #
@@ -10,22 +11,6 @@ import tkinter
 from typing import Any, Optional
 import customtkinter
 from tkintermapview import TkinterMapView
-
-# ground_position = (1381, (32.940058, -106.921903))
-# air_position    = (1381, (32.940438, -106.901790))
-#
-# # Straight line distance between the ground positions
-# distance = utils.distance_from_points(ground_position[1], air_position[1])
-#
-# # Altitude above ground station position
-# altitude = air_position[0] - ground_position[0]
-#
-# horiz, vert = utils.angles_from_points(ground_position, air_position)
-#
-# print(f"  Distance: {distance:.2f}m, {utils.m_to_ft(distance):.2f}ft")
-# print(f"  Altitude: {altitude:.2f}m, {utils.m_to_ft(altitude):.2f}ft")
-# print(f"Horizontal: {horiz:.2f}° (degrees from North)")
-# print(f"  Vertical: {vert:.2f}° (degrees above horizon)")
 
 ## LOCAL IMPORTS ##
 import utils

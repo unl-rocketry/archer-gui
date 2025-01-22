@@ -1,6 +1,9 @@
+## See `main.py` for more information
+
 import math
 from typing import Optional, Self, Tuple
 from pygeomag import GeoMag
+import datetime
 
 ## CONSTANTS ##
 EARTH_RADIUS_METERS = 6_378_137
@@ -8,7 +11,7 @@ EARTH_RADIUS_METERS = 6_378_137
 class GPSPoint():
     """ A single point on the Earth, including altitude. """
 
-    def __init__(self, latitude: float, longitude: float, altitude: Optional[float] = None) -> None:
+    def __init__(self, latitude: float = 0.0, longitude: float = 0.0, altitude: Optional[float] = None) -> None:
         self.lat = latitude
         self.lon = longitude
         self.alt = altitude
@@ -24,8 +27,6 @@ class GPSPoint():
     def distance_to(self, other: Self) -> float:
         """ Great-circle ground-only distance in meters between two GPS Points. """
 
-        earth_radius_meters = 6_378_137
-
         delta_lat_rad = other.lat_rad() - self.lat_rad()
         delta_lon_rad = other.lon_rad() - self.lon_rad()
 
@@ -33,7 +34,7 @@ class GPSPoint():
 
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
-        return earth_radius_meters * c
+        return EARTH_RADIUS_METERS * c
 
     def altitude_to(self, other: Self) -> Optional[float]:
         if self.alt is not None and other.alt is not None:
@@ -54,6 +55,7 @@ class GPSPoint():
         # Convert the bearing to degrees
         bearing = math.degrees(bearing)
 
+        # Ensure the value is from -180→180 instead of 0→360
         if positive:
             bearing = (bearing + 360) % 360
 
@@ -64,8 +66,11 @@ class GPSPoint():
 
         bearing = self.bearing_to(other, False)
 
-        geo_mag = GeoMag(coefficients_file="/home/g2/Documents/projects/aerospace_club/Rocketry/tracker/src/WMMHR2025.COF", high_resolution=True)
-        result = geo_mag.calculate(glat=self.lat, glon=self.lon, alt=self.alt or 0.0, time=2025.00)
+        current_datetime = datetime.datetime.now()
+        fractional_year = (float((current_datetime.date() - datetime.date(current_datetime.year, 1, 1)).days) / 365.2425) + current_datetime.year
+
+        geo_mag = GeoMag(base_year=datetime.datetime.now(), high_resolution=True)
+        result = geo_mag.calculate(glat=self.lat, glon=self.lon, alt=self.alt or 0.0, time=fractional_year)
 
         bearing = bearing + result.d
 
