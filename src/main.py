@@ -140,8 +140,8 @@ class App(customtkinter.CTk):
         horiz = self.ground_position.bearing_mag_corrected_to(self.air_position)
         vert = self.ground_position.elevation_to(self.air_position)
 
-        self.serialport.write(f"DVER -{vert}\n".encode("ASCII"))
-        self.serialport.write(f"DHOR -{horiz}\n".encode("ASCII"))
+        self.serialport.write(f"DVER {-vert}\n".encode("ASCII"))
+        self.serialport.write(f"DHOR {-horiz}\n".encode("ASCII"))
 
         self.telemetry_bear.configure(text=f"{horiz:.2f}°")
         self.telemetry_elev.configure(text=f"{vert:.2f}°")
