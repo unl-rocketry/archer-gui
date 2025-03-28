@@ -1,5 +1,5 @@
 ## 2025, UNL Aerospace Club
-## Grant Gardner, Yen Do
+## Grant Gardner, Yen Do, Manas Moondra
 ## Licensed under the GNU General Public License version 3
 #
 # Program to calculate angles for a dish given two GPS coordinates
@@ -7,14 +7,12 @@
 # Lots of useful formulas for things used here:
 # https://www.movable-type.co.uk/scripts/latlong.html
 
-import tkinter
 from typing import Any, Optional
 import customtkinter
 from tkintermapview import TkinterMapView
 import serial
 
 ## LOCAL IMPORTS ##
-import utils
 from utils import GPSPoint
 
 # Spaceport: 32.940058, -106.921903
