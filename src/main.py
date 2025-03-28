@@ -128,7 +128,7 @@ class App(customtkinter.CTk):
             return
 
         # Straight line distance between the ground positions
-        distance = self.ground_position.distance_to(self.air_position)
+        #distance = self.ground_position.distance_to(self.air_position)
 
         # Altitude above ground station position
         altitude = self.ground_position.altitude_to(self.air_position)

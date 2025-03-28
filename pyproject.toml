@@ -8,5 +8,6 @@ dependencies = [
     "customtkinter>=5.2.2",
     "pygeomag>=1.1.0",
     "pyserial>=3.5",
+    "ruff>=0.11.2",
     "tkintermapview>=1.29",
 ]
