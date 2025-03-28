@@ -5,9 +5,9 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "customtkinter>=5.2.2",
-    "pygeomag>=1.1.0",
+    "customtkinter>=5.2",
+    "pygeomag>=1.1",
     "pyserial>=3.5",
-    "ruff>=0.11.2",
+    "ruff>=0.11",
     "tkintermapview>=1.29",
 ]

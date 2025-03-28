@@ -1,5 +1,4 @@
 ## 2025, UNL Aerospace Club
-## Grant Gardner, Yen Do, Manas Moondra
 ## Licensed under the GNU General Public License version 3
 #
 # Program to calculate angles for a dish given two GPS coordinates

@@ -281,10 +281,10 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "customtkinter", specifier = ">=5.2.2" },
-    { name = "pygeomag", specifier = ">=1.1.0" },
+    { name = "customtkinter", specifier = ">=5.2" },
+    { name = "pygeomag", specifier = ">=1.1" },
     { name = "pyserial", specifier = ">=3.5" },
-    { name = "ruff", specifier = ">=0.11.2" },
+    { name = "ruff", specifier = ">=0.11" },
     { name = "tkintermapview", specifier = ">=1.29" },
 ]
 
