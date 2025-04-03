@@ -10,6 +10,9 @@ from typing import Any, Optional
 import customtkinter
 from tkintermapview import TkinterMapView
 import serial
+from threading import Thread
+from time import sleep
+import json
 
 ## LOCAL IMPORTS ##
 from utils import GPSPoint
@@ -17,6 +20,9 @@ from utils import GPSPoint
 # Spaceport: 32.940058, -106.921903
 DEFAULT_LAT = 40.82320
 DEFAULT_LON = -96.69693
+
+# global ROCKET_PACKET_CONT 
+ROCKET_PACKET_CONT = None
 
 class App(customtkinter.CTk):
 
@@ -27,7 +33,7 @@ class App(customtkinter.CTk):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.serialport = serial.Serial('/dev/ttyUSB0', 115200)
+        self.serialport = None
 
         self.title(App.APP_NAME)
         self.geometry(str(App.WIDTH) + "x" + str(App.HEIGHT))
@@ -104,26 +110,40 @@ class App(customtkinter.CTk):
         # Right click event handling
         self.map_widget.add_right_click_menu_command(label="Set Ground Position", command=self.set_ground_position, pass_coords=True)
 
-        self.map_widget.add_left_click_map_command(self.set_air_position)
+        # self.map_widget.add_left_click_map_command(self.set_air_position)
 
-        # Set default values
+        # Set default value
         self.map_widget.set_position(DEFAULT_LAT, DEFAULT_LON)
         self.map_widget.set_zoom(16)
         self.map_option_menu.set("Google hybrid")
         self.map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}&s=Ga", max_zoom=22)
 
-    def set_air_position(self, coords):
-        if self.air_marker is not None:
-            self.air_marker.delete()
+    def set_air_position(self):
 
-        self.telemetry_lat.configure(text=f"{coords[0]:.5f}")
-        self.telemetry_lon.configure(text=f"{coords[1]:.5f}")
-        self.telemetry_alt.configure(text=f"{4429}m")
+        print("function ran yay")
+        if ROCKET_PACKET_CONT is None:
+            self.after(500, self.set_air_position)
+            return
 
-        self.air_position = GPSPoint(coords[0], coords[1], 4429)
-        self.air_marker = self.map_widget.set_marker(coords[0], coords[1])
+        self.telemetry_lat.configure(text=f"{ROCKET_PACKET_CONT["latitude"]:.8f}")
+        self.telemetry_lon.configure(text=f"{ROCKET_PACKET_CONT["longitude"]:.8f}")
+        self.telemetry_alt.configure(text=f"{ROCKET_PACKET_CONT["altitude"]:.2f}m")
+
+        self.air_position = GPSPoint(
+            ROCKET_PACKET_CONT["latitude"],
+            ROCKET_PACKET_CONT["longitude"],
+            ROCKET_PACKET_CONT["altitude"]
+        )
+
+        last_marker = self.air_marker
+
+        self.air_marker = self.map_widget.set_marker(ROCKET_PACKET_CONT["latitude"], ROCKET_PACKET_CONT["longitude"])
+
+        if last_marker is not None:
+            last_marker.delete()
 
         if self.ground_position is None:
+            self.after(500, self.set_air_position)
             return
 
         # Straight line distance between the ground positions
@@ -137,11 +157,10 @@ class App(customtkinter.CTk):
         horiz = self.ground_position.bearing_mag_corrected_to(self.air_position)
         vert = self.ground_position.elevation_to(self.air_position)
 
-        self.serialport.write(f"DVER {-vert}\n".encode("ASCII"))
-        self.serialport.write(f"DHOR {-horiz}\n".encode("ASCII"))
-
         self.telemetry_bear.configure(text=f"{horiz:.2f}°")
         self.telemetry_elev.configure(text=f"{vert:.2f}°")
+
+        self.after(500, self.set_air_position)
 
     def set_ground_position(self, coords):
         if self.ground_marker is not None:
@@ -162,9 +181,30 @@ class App(customtkinter.CTk):
         self.destroy()
 
     def start(self):
+        self.after(500, self.set_air_position)
+
         self.mainloop()
 
 
+def gps_loop():
+    gps_serial = serial.Serial('/dev/ttyUSB0', 57600, timeout=1)
+
+    while True:
+        new_data = gps_serial.readline().decode("utf-8").strip()
+        # print(new_data)
+        try:
+            new_new_data = json.loads(new_data)
+            # print(new_data)
+            global ROCKET_PACKET_CONT
+            ROCKET_PACKET_CONT = new_new_data
+            # print(ROCKET_PACKET_CONT["latitude"])
+        except:
+            print("Failed to decode json")
+        
+
 if __name__ == "__main__":
+    t = Thread(target=gps_loop)
+    t.start()
+
     app = App()
     app.start()
