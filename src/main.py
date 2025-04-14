@@ -61,7 +61,7 @@ class App(customtkinter.CTk):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        self.frame_left = customtkinter.CTkFrame(master=self, width=250, corner_radius=0, fg_color=None)
+        self.frame_left = customtkinter.CTkFrame(master=self, width=400, corner_radius=0, fg_color=None)
         self.frame_left.grid(row=0, column=0, padx=0, pady=0, sticky="nsew")
         self.frame_left.grid_propagate(False)
 
@@ -75,31 +75,36 @@ class App(customtkinter.CTk):
         #self.button_1 = customtkinter.CTkButton(master=self.frame_left, text="Set Marker", command=self.set_marker_event)
         #self.button_1.grid(pady=(20, 0), padx=(20, 20), row=0, column=0)
 
-        telemetry_frame = customtkinter.CTkFrame(self.frame_left, fg_color="transparent", width=250)
+        telemetry_frame = customtkinter.CTkFrame(self.frame_left, fg_color="transparent", width=400)
         telemetry_frame.grid_propagate(False)
         telemetry_frame.grid(pady=(20, 0), padx=(10, 0))
 
-        PADDING = 15
-        customtkinter.CTkLabel(telemetry_frame, text="Latitude:", font=("Noto Sans", 18)).grid(row=0, column=0, sticky="e", padx=(0, PADDING))
-        self.telemetry_lat = customtkinter.CTkLabel(telemetry_frame, text="", font=("Noto Sans", 18), compound="right", justify="right", anchor="e")
-        self.telemetry_lat.grid(row=0, column=1, sticky="e")
-        customtkinter.CTkLabel(telemetry_frame, text="Longitude:", font=("Noto Sans", 18)).grid(row=1, column=0, sticky="e", padx=(0, PADDING))
-        self.telemetry_lon = customtkinter.CTkLabel(telemetry_frame, text="", font=("Noto Sans", 18), compound="right", justify="right", anchor="e")
-        self.telemetry_lon.grid(row=1, column=1, sticky="e")
-        customtkinter.CTkLabel(telemetry_frame, text="Altitude:", font=("Noto Sans", 18)).grid(row=2, column=0, sticky="e", padx=(0, PADDING))
-        self.telemetry_alt = customtkinter.CTkLabel(telemetry_frame, text="", font=("Noto Sans", 18), compound="right", justify="right", anchor="e")
-        self.telemetry_alt.grid(row=2, column=1, sticky="e")
-        customtkinter.CTkLabel(telemetry_frame, text="Elevation:", font=("Noto Sans", 18)).grid(row=3, column=0, sticky="e", padx=(0, PADDING))
-        self.telemetry_elev = customtkinter.CTkLabel(telemetry_frame, text="", font=("Noto Sans", 18), compound="right", justify="right", anchor="e")
-        self.telemetry_elev.grid(row=3, column=1, sticky="e")
-        customtkinter.CTkLabel(telemetry_frame, text="Bearing:", font=("Noto Sans", 18)).grid(row=4, column=0, sticky="e", padx=(0, PADDING))
-        self.telemetry_bear = customtkinter.CTkLabel(telemetry_frame, text="", font=("Noto Sans", 18), compound="right", justify="right", anchor="e")
-        self.telemetry_bear.grid(row=4, column=1, sticky="e")
+        customtkinter.CTkLabel(telemetry_frame, text="Telemetry", font=("Noto Sans", 18)).grid(row=0, column=0, pady=10)
 
-        # Ground position set
+        PADDING = 15
+        customtkinter.CTkLabel(telemetry_frame, text="Latitude:", font=("Noto Sans", 18)).grid(row=1, column=0, sticky="e", padx=(0, PADDING))
+        self.telemetry_lat = customtkinter.CTkLabel(telemetry_frame, text="", font=("Noto Sans", 18), compound="right", justify="right", anchor="e")
+        self.telemetry_lat.grid(row=1, column=1, sticky="e")
+        customtkinter.CTkLabel(telemetry_frame, text="Longitude:", font=("Noto Sans", 18)).grid(row=2, column=0, sticky="e", padx=(0, PADDING))
+        self.telemetry_lon = customtkinter.CTkLabel(telemetry_frame, text="", font=("Noto Sans", 18), compound="right", justify="right", anchor="e")
+        self.telemetry_lon.grid(row=2, column=1, sticky="e")
+        customtkinter.CTkLabel(telemetry_frame, text="Altitude:", font=("Noto Sans", 18)).grid(row=3, column=0, sticky="e", padx=(0, PADDING))
+        self.telemetry_alt = customtkinter.CTkLabel(telemetry_frame, text="", font=("Noto Sans", 18), compound="right", justify="right", anchor="e")
+        self.telemetry_alt.grid(row=3, column=1, sticky="e")
+        customtkinter.CTkLabel(telemetry_frame, text="Elevation:", font=("Noto Sans", 18)).grid(row=4, column=0, sticky="e", padx=(0, PADDING))
+        self.telemetry_elev = customtkinter.CTkLabel(telemetry_frame, text="", font=("Noto Sans", 18), compound="right", justify="right", anchor="e")
+        self.telemetry_elev.grid(row=4, column=1, sticky="e")
+        customtkinter.CTkLabel(telemetry_frame, text="Bearing:", font=("Noto Sans", 18)).grid(row=5, column=0, sticky="e", padx=(0, PADDING))
+        self.telemetry_bear = customtkinter.CTkLabel(telemetry_frame, text="", font=("Noto Sans", 18), compound="right", justify="right", anchor="e")
+        self.telemetry_bear.grid(row=5, column=1, sticky="e")
+
+
+
+        # Ground position settings
         self.ground_settings = GroundSettings(master=self.frame_left, command=self.set_ground_parameters)
         self.ground_settings.grid()
 
+        # Map style settings
         self.map_label = customtkinter.CTkLabel(self.frame_left, text="Map Style:", anchor="w")
         self.map_label.grid(padx=(20, 20), pady=(20, 0))
         self.map_option_menu = customtkinter.CTkOptionMenu(self.frame_left, values=["Google hybrid", "Google normal", "Google satellite", "OpenStreetMap"], command=self.change_map)
@@ -153,6 +158,17 @@ class App(customtkinter.CTk):
             self.ground_position.lon
         )
 
+    def right_click_ground_position(self, coords):
+        if self.ground_marker is not None:
+            self.ground_marker.delete()
+
+        self.ground_position = GPSPoint(coords[0], coords[1], self.ground_position.alt)
+        self.ground_marker = self.map_widget.set_marker(coords[0], coords[1])
+
+        self.ground_settings.latitude.set(coords[0])
+        self.ground_settings.longitude.set(coords[1])
+        self.ground_settings.altitude.set(str(self.ground_position.alt))
+
     def set_air_position(self):
 
         #print("function ran yay")
@@ -199,17 +215,6 @@ class App(customtkinter.CTk):
         self.telemetry_elev.configure(text=f"{vert:.2f}°")
 
         self.after(500, self.set_air_position)
-
-    def right_click_ground_position(self, coords):
-        if self.ground_marker is not None:
-            self.ground_marker.delete()
-
-        self.ground_position = GPSPoint(coords[0], coords[1], self.ground_position.alt)
-        self.ground_marker = self.map_widget.set_marker(coords[0], coords[1])
-
-        self.ground_settings.latitude.set(coords[0])
-        self.ground_settings.longitude.set(coords[1])
-        self.ground_settings.altitude.set(str(self.ground_position.alt))
 
     def change_map(self, new_map: str):
         match new_map:
@@ -287,18 +292,20 @@ class LabeledTextEntry(customtkinter.CTkFrame):
 def gps_loop(gps_port: str):
     try:
         gps_serial = serial.Serial(gps_port, 57600, timeout=1)
-    except IOError:
+    except IOError as e:
+        print(f"Failed to start GPS loop: {e}")
         return
 
     while True:
         new_data = gps_serial.readline().decode("utf-8").strip()
-        # print(new_data)
+
+        new_crc, new_json = new_data.split(maxsplit=1)
+        print(new_crc)
+
         try:
-            new_new_data = json.loads(new_data)
-            # print(new_data)
+            new_data = json.loads(new_json)
             global ROCKET_PACKET_CONT
-            ROCKET_PACKET_CONT = new_new_data
-            # print(ROCKET_PACKET_CONT["latitude"])
+            ROCKET_PACKET_CONT = new_data
         except IOError:
             print("Failed to decode json")
 
