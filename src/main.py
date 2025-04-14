@@ -69,35 +69,11 @@ class App(customtkinter.CTk):
 
         # ============ frame_left ============
 
-        #self.frame_left.grid_rowconfigure(5, weight=1)
+        self.frame_left.grid_columnconfigure(0, weight=1)
 
-        #self.button_1 = customtkinter.CTkButton(master=self.frame_left, text="Set Marker", command=self.set_marker_event)
-        #self.button_1.grid(pady=(20, 0), padx=(20, 20), row=0, column=0)
-
-        telemetry_frame = customtkinter.CTkFrame(self.frame_left, fg_color="transparent", width=400)
-        telemetry_frame.grid_propagate(False)
-        telemetry_frame.grid(pady=(20, 0), padx=(10, 0))
-
-        customtkinter.CTkLabel(telemetry_frame, text="Telemetry", font=("Noto Sans", 18)).grid(row=0, column=0, pady=10)
-
-        PADDING = 15
-        customtkinter.CTkLabel(telemetry_frame, text="Latitude:", font=("Noto Sans", 18)).grid(row=1, column=0, sticky="e", padx=(0, PADDING))
-        self.telemetry_lat = customtkinter.CTkLabel(telemetry_frame, text="", font=("Noto Sans", 18), compound="right", justify="right", anchor="e")
-        self.telemetry_lat.grid(row=1, column=1, sticky="e")
-        customtkinter.CTkLabel(telemetry_frame, text="Longitude:", font=("Noto Sans", 18)).grid(row=2, column=0, sticky="e", padx=(0, PADDING))
-        self.telemetry_lon = customtkinter.CTkLabel(telemetry_frame, text="", font=("Noto Sans", 18), compound="right", justify="right", anchor="e")
-        self.telemetry_lon.grid(row=2, column=1, sticky="e")
-        customtkinter.CTkLabel(telemetry_frame, text="Altitude:", font=("Noto Sans", 18)).grid(row=3, column=0, sticky="e", padx=(0, PADDING))
-        self.telemetry_alt = customtkinter.CTkLabel(telemetry_frame, text="", font=("Noto Sans", 18), compound="right", justify="right", anchor="e")
-        self.telemetry_alt.grid(row=3, column=1, sticky="e")
-        customtkinter.CTkLabel(telemetry_frame, text="Elevation:", font=("Noto Sans", 18)).grid(row=4, column=0, sticky="e", padx=(0, PADDING))
-        self.telemetry_elev = customtkinter.CTkLabel(telemetry_frame, text="", font=("Noto Sans", 18), compound="right", justify="right", anchor="e")
-        self.telemetry_elev.grid(row=4, column=1, sticky="e")
-        customtkinter.CTkLabel(telemetry_frame, text="Bearing:", font=("Noto Sans", 18)).grid(row=5, column=0, sticky="e", padx=(0, PADDING))
-        self.telemetry_bear = customtkinter.CTkLabel(telemetry_frame, text="", font=("Noto Sans", 18), compound="right", justify="right", anchor="e")
-        self.telemetry_bear.grid(row=5, column=1, sticky="e")
-
-
+        # Telemetry display
+        self.telemetry = Telemetry(master=self.frame_left, command=self.set_ground_parameters)
+        self.telemetry.grid(pady=20)
 
         # Ground position settings
         self.ground_settings = GroundSettings(master=self.frame_left, command=self.set_ground_parameters)
@@ -253,24 +229,63 @@ class App(customtkinter.CTk):
         self.mainloop()
 
 
+class Telemetry(customtkinter.CTkFrame):
+    def __init__(self, master, command, **kwargs):
+        super().__init__(master, fg_color="transparent", border_width=0, **kwargs)
+
+        #self.grid_propagate(False)
+
+        customtkinter.CTkLabel(
+            self,
+            text="Telemetry:",
+            anchor="w",
+            font=("Noto Sans", 18)
+        ).grid(columnspan=2)
+
+        customtkinter.CTkLabel(self, text="Latitude:").grid(row=1, column=0, padx=10)
+        self.telemetry_lat = customtkinter.CTkLabel(self, text="eeeeeeeeeeeeeeeee", compound="right", justify="right", anchor="e")
+        self.telemetry_lat.grid(row=1, column=1)
+
+        customtkinter.CTkLabel(self, text="Longitude:").grid(row=2, column=0, padx=10)
+        self.telemetry_lon = customtkinter.CTkLabel(self, text="eeeeeeeeeeeeeeeee", compound="right", justify="right", anchor="e")
+        self.telemetry_lon.grid(row=2, column=1)
+
+        customtkinter.CTkLabel(self, text="Altitude:").grid(row=3, column=0, padx=10)
+        self.telemetry_alt = customtkinter.CTkLabel(self, text="eeeeeeeeeeeeeeeee", compound="right", justify="right", anchor="e")
+        self.telemetry_alt.grid(row=3, column=1)
+
+        customtkinter.CTkLabel(self, text="Elevation:").grid(row=4, column=0, padx=10)
+        self.telemetry_elev = customtkinter.CTkLabel(self, text="eeeeeeeeeeeeeeeee", compound="right", justify="right", anchor="e")
+        self.telemetry_elev.grid(row=4, column=1)
+
+        customtkinter.CTkLabel(self, text="Bearing:").grid(row=5, column=0, padx=10)
+        self.telemetry_bear = customtkinter.CTkLabel(self, text="eeeeeeeeeeeeeeeee", compound="right", justify="right", anchor="e")
+        self.telemetry_bear.grid(row=5, column=1)
+
+
 class GroundSettings(customtkinter.CTkFrame):
     def __init__(self, master, command, **kwargs):
         super().__init__(master, fg_color="transparent", border_width=0, **kwargs)
 
-        self.label = customtkinter.CTkLabel(self, text="Ground Settings:", anchor="w")
+        self.label = customtkinter.CTkLabel(
+            self,
+            text="Ground Settings:",
+            anchor="w",
+            font=("Noto Sans", 18)
+        )
         self.label.grid()
 
-        self.latitude = LabeledTextEntry(master=self, label_text="Latitude")
+        self.latitude = LabeledTextEntry(self, label_text="Latitude")
         self.latitude.grid(pady=2.5, padx=5, sticky="w")
 
-        self.longitude = LabeledTextEntry(master=self, label_text="Longitude")
+        self.longitude = LabeledTextEntry(self, label_text="Longitude")
         self.longitude.grid(pady=2.5, padx=5, sticky="w")
 
-        self.altitude = LabeledTextEntry(master=self, label_text="Altitude")
+        self.altitude = LabeledTextEntry(self, label_text="Altitude")
         self.altitude.grid(pady=2.5, padx=5, sticky="w")
 
         self.button = customtkinter.CTkButton(self, text="Set Ground Settings", command=command)
-        self.button.grid(pady=5)
+        self.button.grid(pady=(5, 0))
 
 
 class LabeledTextEntry(customtkinter.CTkFrame):
@@ -279,7 +294,7 @@ class LabeledTextEntry(customtkinter.CTkFrame):
     def __init__(self, master, label_text="", placeholder_text="", **kwargs):
         super().__init__(master, **kwargs)
 
-        self.label = customtkinter.CTkLabel(self, text=label_text, width=70)
+        self.label = customtkinter.CTkLabel(self, text=label_text, width=70, anchor="e")
         self.label.grid(row=0, column=0, padx=5)
 
         self.entry = customtkinter.CTkEntry(self, placeholder_text=placeholder_text)
