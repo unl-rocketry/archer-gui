@@ -12,10 +12,10 @@ from tkintermapview import TkinterMapView
 import serial
 from threading import Thread
 import json
-
-from rotator import Rotator
+import signal
 
 ## LOCAL IMPORTS ##
+from rotator import Rotator
 from utils import GPSPoint
 
 # Spaceport:    32.940058,  -106.921903
@@ -24,6 +24,7 @@ from utils import GPSPoint
 DEFAULT_LAT = 40.82320
 DEFAULT_LON = -96.69693
 
+# Global variable storing rocket packet data
 ROCKET_PACKET_CONT = None
 
 class App(customtkinter.CTk):
@@ -159,24 +160,19 @@ class App(customtkinter.CTk):
             self.after(500, self.set_air_position)
             return
 
-        self.telemetry_lat.configure(text=f"{ROCKET_PACKET_CONT["gps"]["latitude"]:.8f}")
-        self.telemetry_lon.configure(text=f"{ROCKET_PACKET_CONT["gps"]["longitude"]:.8f}")
-        self.telemetry_alt.configure(text=f"{ROCKET_PACKET_CONT["gps"]["altitude"]:.2f}m")
-        print(f"{ROCKET_PACKET_CONT["gps"]["altitude"]:.2f}m")
+        gps_lat = ROCKET_PACKET_CONT["gps"]["latitude"]
+        gps_lon = ROCKET_PACKET_CONT["gps"]["longitude"]
+        gps_alt = ROCKET_PACKET_CONT["gps"]["altitude"]
 
-        self.air_position = GPSPoint(
-            ROCKET_PACKET_CONT["gps"]["latitude"],
-            ROCKET_PACKET_CONT["gps"]["longitude"],
-            ROCKET_PACKET_CONT["gps"]["altitude"]
-        )
+        self.telemetry_lat.configure(text=f"{gps_lat:.8f}")
+        self.telemetry_lon.configure(text=f"{gps_lon:.8f}")
+        self.telemetry_alt.configure(text=f"{gps_alt:.2f}m")
 
+        self.air_position = GPSPoint(gps_lat, gps_lon, gps_alt)
+
+        # Update the marker for the air side
         last_marker = self.air_marker
-
-        self.air_marker = self.map_widget.set_marker(
-            ROCKET_PACKET_CONT["gps"]["latitude"],
-            ROCKET_PACKET_CONT["gps"]["longitude"]
-        )
-
+        self.air_marker = self.map_widget.set_marker(gps_lat, gps_lon)
         if last_marker is not None:
             last_marker.delete()
 
@@ -238,9 +234,8 @@ class App(customtkinter.CTk):
                     max_zoom=22
                 )
 
-    def on_closing(self, event=0):
-
-
+    def on_closing(self, signal=0, frame=None):
+        print("Exiting!")
         self.destroy()
 
     def start(self):
@@ -315,4 +310,8 @@ if __name__ == "__main__":
     t.start()
 
     app = App()
+
+    # Catch Ctl + C
+    signal.signal(signal.SIGINT, app.on_closing)
+
     app.start()
