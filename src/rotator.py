@@ -13,16 +13,10 @@ class Rotator():
     def set_position_vertical(self, pos: float):
         self.main_port.write("DVER {}\n".format(pos).encode())
 
-        result = self.main_port.readline()
-        if result.startswith(b"OK"):
-            raise
 
     def set_position_horizontal(self, pos: float):
-        self.main_port.write("DHOR {}\n".format(pos).encode())
+        self.main_port.write("DHOR {}\n".format(-pos).encode())
 
-        result = self.main_port.readline()
-        if result.startswith(b"OK"):
-            raise
 
     def calibrate_vertical(self, set = False):
         """ Begin vertical calibration. This function blocks until calibration
@@ -32,39 +26,33 @@ class Rotator():
         else:
             self.main_port.write(b"CALV\n")
 
-        result = self.main_port.readline()
-        if result.startswith(b"OK"):
-            raise
 
     def calibrate_horizontal(self):
         self.main_port.write(b"CALH\n")
 
-        result = self.main_port.readline()
-        if result.startswith(b"OK"):
-            raise
 
     def move_vertical(self, steps: int):
         self.main_port.write("MOVV {}\n".format(steps).encode())
 
-        result = self.main_port.readline()
-        if result.startswith(b"OK"):
-            raise
 
     def move_horizontal(self, steps: int):
         self.main_port.write("MOVH {}\n".format(steps).encode())
 
-        result = self.main_port.readline()
-        if result.startswith(b"OK"):
-            raise
 
     def position(self) -> tuple[float, float]:
+        self.__dump_input()
         self.main_port.write(b"GETP\n")
 
+        self.main_port.readline()
         result = self.main_port.readline().split()
-        if result[0] != b"OK":
-            raise
+
+        if len(result) < 3:
+            return (0.0, 0.0)
 
         return (float(result[1]), float(result[2]))
+
+    def __dump_input(self):
+        self.main_port.reset_input_buffer()
 
 
 

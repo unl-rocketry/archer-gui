@@ -14,6 +14,8 @@ from threading import Thread
 from time import sleep
 import json
 
+from rotator import Rotator
+
 ## LOCAL IMPORTS ##
 from utils import GPSPoint
 
@@ -33,7 +35,10 @@ class App(customtkinter.CTk):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.serialport = None
+        try:
+            self.rotator = Rotator("/dev/ttyUSB1")
+        except:
+            self.rotator = None
 
         self.title(App.APP_NAME)
         self.geometry(str(App.WIDTH) + "x" + str(App.HEIGHT))
@@ -90,6 +95,13 @@ class App(customtkinter.CTk):
         self.telemetry_bear = customtkinter.CTkLabel(telemetry_frame, text="z", font=("Arial", 18), compound="right", justify="right", anchor="e")
         self.telemetry_bear.grid(row=4, column=1, sticky="e")
 
+        # Ground altitude set
+        self.altitude_set_label = customtkinter.CTkLabel(self.frame_left, text="Ground Altitude:", anchor="w")
+        self.altitude_set_label.grid(padx=(20, 20), pady=(20, 0))
+        self.altitude_set = customtkinter.CTkEntry(self.frame_left, placeholder_text="0.0")
+        self.altitude_set.grid(padx=(20, 20), pady=(0, 0))
+        self.altitude_set_button = customtkinter.CTkButton(self.frame_left, text="Set Ground Alt", command=self.set_ground_altitude)
+        self.altitude_set_button.grid(padx=(20, 20), pady=(0, 0))
 
         self.map_label = customtkinter.CTkLabel(self.frame_left, text="Map Style:", anchor="w")
         self.map_label.grid(padx=(20, 20), pady=(20, 0))
@@ -118,26 +130,38 @@ class App(customtkinter.CTk):
         self.map_option_menu.set("Google hybrid")
         self.map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}&s=Ga", max_zoom=22)
 
+    def set_ground_altitude(self):
+        if self.altitude_set.get() == '':
+            return
+
+        altitude = float(self.altitude_set.get())
+        self.ground_position.alt = altitude
+        print(self.ground_position.alt)
+
     def set_air_position(self):
 
         print("function ran yay")
-        if ROCKET_PACKET_CONT is None:
+        if ROCKET_PACKET_CONT is None or "gps" not in ROCKET_PACKET_CONT:
             self.after(500, self.set_air_position)
             return
 
-        self.telemetry_lat.configure(text=f"{ROCKET_PACKET_CONT["latitude"]:.8f}")
-        self.telemetry_lon.configure(text=f"{ROCKET_PACKET_CONT["longitude"]:.8f}")
-        self.telemetry_alt.configure(text=f"{ROCKET_PACKET_CONT["altitude"]:.2f}m")
+        self.telemetry_lat.configure(text=f"{ROCKET_PACKET_CONT["gps"]["latitude"]:.8f}")
+        self.telemetry_lon.configure(text=f"{ROCKET_PACKET_CONT["gps"]["longitude"]:.8f}")
+        self.telemetry_alt.configure(text=f"{ROCKET_PACKET_CONT["gps"]["altitude"]:.2f}m")
+        print(f"{ROCKET_PACKET_CONT["gps"]["altitude"]:.2f}m");
 
         self.air_position = GPSPoint(
-            ROCKET_PACKET_CONT["latitude"],
-            ROCKET_PACKET_CONT["longitude"],
-            ROCKET_PACKET_CONT["altitude"]
+            ROCKET_PACKET_CONT["gps"]["latitude"],
+            ROCKET_PACKET_CONT["gps"]["longitude"],
+            ROCKET_PACKET_CONT["gps"]["altitude"]
         )
 
         last_marker = self.air_marker
 
-        self.air_marker = self.map_widget.set_marker(ROCKET_PACKET_CONT["latitude"], ROCKET_PACKET_CONT["longitude"])
+        self.air_marker = self.map_widget.set_marker(
+            ROCKET_PACKET_CONT["gps"]["latitude"],
+            ROCKET_PACKET_CONT["gps"]["longitude"]
+        )
 
         if last_marker is not None:
             last_marker.delete()
@@ -157,6 +181,12 @@ class App(customtkinter.CTk):
         horiz = self.ground_position.bearing_mag_corrected_to(self.air_position)
         vert = self.ground_position.elevation_to(self.air_position)
 
+        try:
+            self.rotator.set_position_vertical(vert)
+            self.rotator.set_position_horizontal(horiz)
+        except:
+            print("Rotator borked")
+
         self.telemetry_bear.configure(text=f"{horiz:.2f}°")
         self.telemetry_elev.configure(text=f"{vert:.2f}°")
 
@@ -166,7 +196,7 @@ class App(customtkinter.CTk):
         if self.ground_marker is not None:
             self.ground_marker.delete()
 
-        self.ground_position = GPSPoint(coords[0], coords[1], 1381)
+        self.ground_position = GPSPoint(coords[0], coords[1], self.ground_position.alt)
         self.ground_marker = self.map_widget.set_marker(coords[0], coords[1])
 
     def change_map(self, new_map: str):
@@ -200,7 +230,9 @@ def gps_loop():
             # print(ROCKET_PACKET_CONT["latitude"])
         except:
             print("Failed to decode json")
-        
+
+        print(new_data)
+
 
 if __name__ == "__main__":
     t = Thread(target=gps_loop)
