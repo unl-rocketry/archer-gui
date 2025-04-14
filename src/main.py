@@ -11,7 +11,6 @@ import customtkinter
 from tkintermapview import TkinterMapView
 import serial
 from threading import Thread
-from time import sleep
 import json
 
 from rotator import Rotator
@@ -19,9 +18,9 @@ from rotator import Rotator
 ## LOCAL IMPORTS ##
 from utils import GPSPoint
 
-# Spaceport: 32.940058, -106.921903
-# Texas Place: 31.046083, -103.543556
-# Lincoln: 40.82320, -96.69693
+# Spaceport:    32.940058,  -106.921903
+# Texas Place:  31.046083,  -103.543556
+# Lincoln:      40.82320,    -96.69693
 DEFAULT_LAT = 40.82320
 DEFAULT_LON = -96.69693
 
@@ -38,7 +37,7 @@ class App(customtkinter.CTk):
 
         try:
             self.rotator = Rotator("/dev/ttyUSB1")
-        except:
+        except IOError:
             self.rotator = None
 
         self.title(App.APP_NAME)
@@ -80,20 +79,20 @@ class App(customtkinter.CTk):
         telemetry_frame.grid(pady=(20, 0), padx=(10, 0))
 
         PADDING = 15
-        customtkinter.CTkLabel(telemetry_frame, text="Latitude:", font=("Arial", 18)).grid(row=0, column=0, sticky="e", padx=(0, PADDING))
-        self.telemetry_lat = customtkinter.CTkLabel(telemetry_frame, text="", font=("Arial", 18), compound="right", justify="right", anchor="e")
+        customtkinter.CTkLabel(telemetry_frame, text="Latitude:", font=("Noto Sans", 18)).grid(row=0, column=0, sticky="e", padx=(0, PADDING))
+        self.telemetry_lat = customtkinter.CTkLabel(telemetry_frame, text="", font=("Noto Sans", 18), compound="right", justify="right", anchor="e")
         self.telemetry_lat.grid(row=0, column=1, sticky="e")
-        customtkinter.CTkLabel(telemetry_frame, text="Longitude:", font=("Arial", 18)).grid(row=1, column=0, sticky="e", padx=(0, PADDING))
-        self.telemetry_lon = customtkinter.CTkLabel(telemetry_frame, text="", font=("Arial", 18), compound="right", justify="right", anchor="e")
+        customtkinter.CTkLabel(telemetry_frame, text="Longitude:", font=("Noto Sans", 18)).grid(row=1, column=0, sticky="e", padx=(0, PADDING))
+        self.telemetry_lon = customtkinter.CTkLabel(telemetry_frame, text="", font=("Noto Sans", 18), compound="right", justify="right", anchor="e")
         self.telemetry_lon.grid(row=1, column=1, sticky="e")
-        customtkinter.CTkLabel(telemetry_frame, text="Altitude:", font=("Arial", 18)).grid(row=2, column=0, sticky="e", padx=(0, PADDING))
-        self.telemetry_alt = customtkinter.CTkLabel(telemetry_frame, text="", font=("Arial", 18), compound="right", justify="right", anchor="e")
+        customtkinter.CTkLabel(telemetry_frame, text="Altitude:", font=("Noto Sans", 18)).grid(row=2, column=0, sticky="e", padx=(0, PADDING))
+        self.telemetry_alt = customtkinter.CTkLabel(telemetry_frame, text="", font=("Noto Sans", 18), compound="right", justify="right", anchor="e")
         self.telemetry_alt.grid(row=2, column=1, sticky="e")
-        customtkinter.CTkLabel(telemetry_frame, text="Elevation:", font=("Arial", 18)).grid(row=3, column=0, sticky="e", padx=(0, PADDING))
-        self.telemetry_elev = customtkinter.CTkLabel(telemetry_frame, text="", font=("Arial", 18), compound="right", justify="right", anchor="e")
+        customtkinter.CTkLabel(telemetry_frame, text="Elevation:", font=("Noto Sans", 18)).grid(row=3, column=0, sticky="e", padx=(0, PADDING))
+        self.telemetry_elev = customtkinter.CTkLabel(telemetry_frame, text="", font=("Noto Sans", 18), compound="right", justify="right", anchor="e")
         self.telemetry_elev.grid(row=3, column=1, sticky="e")
-        customtkinter.CTkLabel(telemetry_frame, text="Bearing:", font=("Arial", 18)).grid(row=4, column=0, sticky="e", padx=(0, PADDING))
-        self.telemetry_bear = customtkinter.CTkLabel(telemetry_frame, text="", font=("Arial", 18), compound="right", justify="right", anchor="e")
+        customtkinter.CTkLabel(telemetry_frame, text="Bearing:", font=("Noto Sans", 18)).grid(row=4, column=0, sticky="e", padx=(0, PADDING))
+        self.telemetry_bear = customtkinter.CTkLabel(telemetry_frame, text="", font=("Noto Sans", 18), compound="right", justify="right", anchor="e")
         self.telemetry_bear.grid(row=4, column=1, sticky="e")
 
         # Ground position set
@@ -163,7 +162,7 @@ class App(customtkinter.CTk):
         self.telemetry_lat.configure(text=f"{ROCKET_PACKET_CONT["gps"]["latitude"]:.8f}")
         self.telemetry_lon.configure(text=f"{ROCKET_PACKET_CONT["gps"]["longitude"]:.8f}")
         self.telemetry_alt.configure(text=f"{ROCKET_PACKET_CONT["gps"]["altitude"]:.2f}m")
-        print(f"{ROCKET_PACKET_CONT["gps"]["altitude"]:.2f}m");
+        print(f"{ROCKET_PACKET_CONT["gps"]["altitude"]:.2f}m")
 
         self.air_position = GPSPoint(
             ROCKET_PACKET_CONT["gps"]["latitude"],
@@ -196,11 +195,9 @@ class App(customtkinter.CTk):
         horiz = self.ground_position.bearing_mag_corrected_to(self.air_position)
         vert = self.ground_position.elevation_to(self.air_position)
 
-        try:
+        if self.rotator is not None:
             self.rotator.set_position_vertical(vert)
             self.rotator.set_position_horizontal(horiz)
-        except:
-            print("Rotator borked")
 
         self.telemetry_bear.configure(text=f"{horiz:.2f}°")
         self.telemetry_elev.configure(text=f"{vert:.2f}°")
@@ -216,7 +213,7 @@ class App(customtkinter.CTk):
 
         self.ground_settings.latitude.set(coords[0])
         self.ground_settings.longitude.set(coords[1])
-        self.ground_settings.altitude.set(self.ground_position.alt)
+        self.ground_settings.altitude.set(str(self.ground_position.alt))
 
     def change_map(self, new_map: str):
         match new_map:
@@ -295,7 +292,7 @@ class LabeledTextEntry(customtkinter.CTkFrame):
 def gps_loop(gps_port: str):
     try:
         gps_serial = serial.Serial(gps_port, 57600, timeout=1)
-    except:
+    except IOError:
         return
 
     while True:
@@ -307,7 +304,7 @@ def gps_loop(gps_port: str):
             global ROCKET_PACKET_CONT
             ROCKET_PACKET_CONT = new_new_data
             # print(ROCKET_PACKET_CONT["latitude"])
-        except:
+        except IOError:
             print("Failed to decode json")
 
         print(new_data)

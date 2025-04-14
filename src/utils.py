@@ -5,10 +5,10 @@ from typing import Optional, Self
 from pygeomag import GeoMag
 import datetime
 
+EARTH_RADIUS_METERS = 6_378_137
+
 class GPSPoint():
     """ A single point on the Earth, including altitude. """
-
-    EARTH_RADIUS_METERS = 6_378_137
 
     def __init__(self, latitude: float = 0.0, longitude: float = 0.0, altitude: Optional[float] = None):
         self.lat = latitude
@@ -33,7 +33,7 @@ class GPSPoint():
 
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
-        return self.EARTH_RADIUS_METERS * c
+        return EARTH_RADIUS_METERS * c
 
     def altitude_to(self, other: Self) -> Optional[float]:
         if self.alt is not None and other.alt is not None:
