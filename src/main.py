@@ -13,6 +13,10 @@ import serial
 from threading import Thread
 import json
 import signal
+from tkinter import ttk
+import tkinter as tk
+
+
 ## LOCAL IMPORTS ##
 from rotator import Rotator
 from utils import GPSPoint, crc32
@@ -35,24 +39,11 @@ class App(customtkinter.CTk):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        try:
-            self.rotator = Rotator("/dev/ttyUSB1")
-        except IOError:
-            self.rotator = None
-
         self.title(App.APP_NAME)
         self.geometry(str(self.WIDTH) + "x" + str(self.HEIGHT))
         self.minsize(App.WIDTH, App.HEIGHT)
 
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
-
-        # The ground station position
-        self.ground_marker: Optional[Any] = None
-        self.ground_position = GPSPoint(0, 0, 0)
-
-        # Rocket position
-        self.air_marker: Optional[Any] = None
-        self.air_position = GPSPoint(0, 0, 0)
 
         # ============ create two CTkFrames ============
 
@@ -224,6 +215,19 @@ class App(customtkinter.CTk):
         self.destroy()
 
     def start(self):
+        try:
+            self.rotator = Rotator("/dev/ttyUSB1")
+        except IOError:
+            self.rotator = None
+
+        # The ground station position
+        self.ground_marker: Optional[Any] = None
+        self.ground_position = GPSPoint(0, 0, 0)
+
+        # Rocket position
+        self.air_marker: Optional[Any] = None
+        self.air_position = GPSPoint(0, 0, 0)
+
         self.after(500, self.set_air_position)
 
         self.mainloop()
@@ -238,40 +242,48 @@ class Telemetry(customtkinter.CTkFrame):
             text="Telemetry:",
             anchor="w",
             font=("Noto Sans", 18)
-        ).grid(columnspan=2)
+        ).grid(columnspan=4, pady=(0, 5))
 
-        customtkinter.CTkLabel(self, text="Latitude:").grid(row=1, column=0, padx=10)
-        self.lat = customtkinter.CTkLabel(self, width=200, text="eeeeeeeeeeeeeeeee", anchor="w")
-        self.lat.grid(row=1, column=1)
+        sep = tk.Frame(self, bg="#474747", height=1, bd=0)
+        sep.grid(row=1, columnspan=4, sticky="ew")
 
-        customtkinter.CTkLabel(self, text="Longitude:").grid(row=2, column=0, padx=10)
-        self.lon = customtkinter.CTkLabel(self, width=200, text="eeeeeeeeeeeeeeeee", anchor="w")
-        self.lon.grid(row=2, column=1)
+        customtkinter.CTkLabel(self, text="Latitude:").grid(row=2, column=0, padx=10)
+        self.lat = customtkinter.CTkLabel(self, width=200, text="...", anchor="w")
+        self.lat.grid(row=2, column=1, columnspan=4)
 
-        customtkinter.CTkLabel(self, text="Altitude:").grid(row=3, column=0, padx=10)
-        self.alt = customtkinter.CTkLabel(self, width=200, text="eeeeeeeeeeeeeeeee", anchor="w")
-        self.alt.grid(row=3, column=1)
+        customtkinter.CTkLabel(self, text="Longitude:").grid(row=3, column=0, padx=10)
+        self.lon = customtkinter.CTkLabel(self, width=200, text="...", anchor="w")
+        self.lon.grid(row=3, column=1, columnspan=4)
 
-        customtkinter.CTkLabel(self, text="Elevation:").grid(row=4, column=0, padx=10)
-        self.rot_alt = customtkinter.CTkLabel(self, width=200, text="eeeeeeeee", anchor="w")
-        self.rot_alt.grid(row=4, column=1)
+        customtkinter.CTkLabel(self, text="Altitude:").grid(row=4, column=0, padx=10)
+        self.alt = customtkinter.CTkLabel(self, width=200, text="...", anchor="w")
+        self.alt.grid(row=4, column=1, columnspan=4)
 
-        customtkinter.CTkLabel(self, text="Bearing:").grid(row=5, column=0, padx=10)
-        self.rot_az = customtkinter.CTkLabel(self, width=200, text="eeeeeeeeeeeeeeeee", anchor="w")
-        self.rot_az.grid(row=5, column=1)
+        sep = tk.Frame(self, bg="#474747", height=1, bd=0)
+        sep.grid(row=5, columnspan=4, sticky="ew")
+
+        customtkinter.CTkLabel(self, text="Elevation:").grid(row=6, column=0, padx=10)
+        self.rot_alt = customtkinter.CTkLabel(self, width=50, text="...", anchor="w")
+        self.rot_alt.grid(row=6, column=1)
+
+        customtkinter.CTkLabel(self, text="Bearing:").grid(row=6, column=2, padx=10)
+        self.rot_az = customtkinter.CTkLabel(self, width=50, text="...", anchor="w")
+        self.rot_az.grid(row=6, column=3)
+
+        sep = tk.Frame(self, bg="#474747", height=1, bd=0)
+        sep.grid(row=7, columnspan=4, sticky="ew")
 
 
 class GroundSettings(customtkinter.CTkFrame):
     def __init__(self, master, command, **kwargs):
         super().__init__(master, fg_color="transparent", border_width=0, **kwargs)
 
-        self.label = customtkinter.CTkLabel(
+        customtkinter.CTkLabel(
             self,
             text="Ground Settings:",
             anchor="w",
             font=("Noto Sans", 18)
-        )
-        self.label.grid()
+        ).grid(pady=(0, 5))
 
         self.latitude = LabeledTextEntry(self, label_text="Latitude")
         self.latitude.grid(pady=2.5, padx=5, sticky="w")
