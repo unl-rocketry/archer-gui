@@ -160,9 +160,9 @@ class App(customtkinter.CTk):
         gps_lon = ROCKET_PACKET_CONT["gps"]["longitude"]
         gps_alt = ROCKET_PACKET_CONT["gps"]["altitude"]
 
-        self.telemetry_lat.configure(text=f"{gps_lat:.8f}")
-        self.telemetry_lon.configure(text=f"{gps_lon:.8f}")
-        self.telemetry_alt.configure(text=f"{gps_alt:.2f}m")
+        self.telemetry.lat.configure(text=f"{gps_lat:.8f}")
+        self.telemetry.lon.configure(text=f"{gps_lon:.8f}")
+        self.telemetry.alt.configure(text=f"{gps_alt:.2f}m")
 
         self.air_position = GPSPoint(gps_lat, gps_lon, gps_alt)
 
@@ -191,8 +191,8 @@ class App(customtkinter.CTk):
             self.rotator.set_position_vertical(vert)
             self.rotator.set_position_horizontal(horiz)
 
-        self.telemetry_bear.configure(text=f"{horiz:.2f}°")
-        self.telemetry_elev.configure(text=f"{vert:.2f}°")
+        self.telemetry.rot_az.configure(text=f"{horiz:.1f}°")
+        self.telemetry.rot_alt.configure(text=f"{vert:.1f}°")
 
         self.after(500, self.set_air_position)
 
@@ -233,8 +233,6 @@ class Telemetry(customtkinter.CTkFrame):
     def __init__(self, master, command, **kwargs):
         super().__init__(master, fg_color="transparent", border_width=0, **kwargs)
 
-        #self.grid_propagate(False)
-
         customtkinter.CTkLabel(
             self,
             text="Telemetry:",
@@ -243,24 +241,24 @@ class Telemetry(customtkinter.CTkFrame):
         ).grid(columnspan=2)
 
         customtkinter.CTkLabel(self, text="Latitude:").grid(row=1, column=0, padx=10)
-        self.telemetry_lat = customtkinter.CTkLabel(self, text="eeeeeeeeeeeeeeeee", compound="right", justify="right", anchor="e")
-        self.telemetry_lat.grid(row=1, column=1)
+        self.lat = customtkinter.CTkLabel(self, width=200, text="eeeeeeeeeeeeeeeee", anchor="w")
+        self.lat.grid(row=1, column=1)
 
         customtkinter.CTkLabel(self, text="Longitude:").grid(row=2, column=0, padx=10)
-        self.telemetry_lon = customtkinter.CTkLabel(self, text="eeeeeeeeeeeeeeeee", compound="right", justify="right", anchor="e")
-        self.telemetry_lon.grid(row=2, column=1)
+        self.lon = customtkinter.CTkLabel(self, width=200, text="eeeeeeeeeeeeeeeee", anchor="w")
+        self.lon.grid(row=2, column=1)
 
         customtkinter.CTkLabel(self, text="Altitude:").grid(row=3, column=0, padx=10)
-        self.telemetry_alt = customtkinter.CTkLabel(self, text="eeeeeeeeeeeeeeeee", compound="right", justify="right", anchor="e")
-        self.telemetry_alt.grid(row=3, column=1)
+        self.alt = customtkinter.CTkLabel(self, width=200, text="eeeeeeeeeeeeeeeee", anchor="w")
+        self.alt.grid(row=3, column=1)
 
         customtkinter.CTkLabel(self, text="Elevation:").grid(row=4, column=0, padx=10)
-        self.telemetry_elev = customtkinter.CTkLabel(self, text="eeeeeeeeeeeeeeeee", compound="right", justify="right", anchor="e")
-        self.telemetry_elev.grid(row=4, column=1)
+        self.rot_alt = customtkinter.CTkLabel(self, width=200, text="eeeeeeeee", anchor="w")
+        self.rot_alt.grid(row=4, column=1)
 
         customtkinter.CTkLabel(self, text="Bearing:").grid(row=5, column=0, padx=10)
-        self.telemetry_bear = customtkinter.CTkLabel(self, text="eeeeeeeeeeeeeeeee", compound="right", justify="right", anchor="e")
-        self.telemetry_bear.grid(row=5, column=1)
+        self.rot_az = customtkinter.CTkLabel(self, width=200, text="eeeeeeeeeeeeeeeee", anchor="w")
+        self.rot_az.grid(row=5, column=1)
 
 
 class GroundSettings(customtkinter.CTkFrame):
