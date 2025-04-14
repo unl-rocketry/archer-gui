@@ -13,7 +13,6 @@ import serial
 from threading import Thread
 import json
 import signal
-
 ## LOCAL IMPORTS ##
 from rotator import Rotator
 from utils import GPSPoint
@@ -150,20 +149,25 @@ class App(customtkinter.CTk):
         except ValueError as e:
             print(f"Invalid value! {e}")
 
-        if self.ground_marker is not None:
-            self.ground_marker.delete()
 
-        self.ground_marker = self.map_widget.set_marker(
-            self.ground_position.lat,
-            self.ground_position.lon
-        )
+        if self.ground_marker is not None:
+            self.ground_marker.set_position(
+                self.ground_position.lat,
+                self.ground_position.lon
+            )
+        else:
+            self.ground_marker = self.map_widget.set_marker(
+                self.ground_position.lat,
+                self.ground_position.lon
+            )
 
     def right_click_ground_position(self, coords):
         if self.ground_marker is not None:
-            self.ground_marker.delete()
+            self.ground_marker.set_position(coords[0], coords[1])
+        else:
+            self.ground_marker = self.map_widget.set_marker(coords[0], coords[1])
 
         self.ground_position = GPSPoint(coords[0], coords[1], self.ground_position.alt)
-        self.ground_marker = self.map_widget.set_marker(coords[0], coords[1])
 
         self.ground_settings.latitude.set(coords[0])
         self.ground_settings.longitude.set(coords[1])
@@ -187,22 +191,22 @@ class App(customtkinter.CTk):
         self.air_position = GPSPoint(gps_lat, gps_lon, gps_alt)
 
         # Update the marker for the air side
-        last_marker = self.air_marker
-        self.air_marker = self.map_widget.set_marker(gps_lat, gps_lon)
-        if last_marker is not None:
-            last_marker.delete()
+        if self.air_marker is not None:
+            self.air_marker.set_position(gps_lat, gps_lon)
+        else:
+            self.air_marker = self.map_widget.set_marker(gps_lat, gps_lon)
 
         if self.ground_position is None:
             self.after(500, self.set_air_position)
             return
 
         # Straight line distance between the ground positions
-        #distance = self.ground_position.distance_to(self.air_position)
+        # distance = self.ground_position.distance_to(self.air_position)
 
         # Altitude above ground station position
-        altitude = self.ground_position.altitude_to(self.air_position)
-        if altitude is None:
-            altitude = 0.0
+        # altitude = self.ground_position.altitude_to(self.air_position)
+        # if altitude is None:
+        #    altitude = 0.0
 
         horiz = self.ground_position.bearing_mag_corrected_to(self.air_position)
         vert = self.ground_position.elevation_to(self.air_position)
@@ -303,13 +307,13 @@ def gps_loop(gps_port: str):
         print(new_crc)
 
         try:
-            new_data = json.loads(new_json)
+            decoded_data = json.loads(new_json)
             global ROCKET_PACKET_CONT
-            ROCKET_PACKET_CONT = new_data
-        except IOError:
-            print("Failed to decode json")
+            ROCKET_PACKET_CONT = decoded_data
+            print(decoded_data)
+        except IOError as e:
+            print(f"Failed to decode json: {e}")
 
-        print(new_data)
 
 
 if __name__ == "__main__":
