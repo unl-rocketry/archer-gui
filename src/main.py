@@ -15,7 +15,7 @@ import json
 import signal
 ## LOCAL IMPORTS ##
 from rotator import Rotator
-from utils import GPSPoint
+from utils import GPSPoint, crc32
 
 # Spaceport:    32.940058,  -106.921903
 # Texas Place:  31.046083,  -103.543556
@@ -304,7 +304,11 @@ def gps_loop(gps_port: str):
         new_data = gps_serial.readline().decode("utf-8").strip()
 
         new_crc, new_json = new_data.split(maxsplit=1)
-        print(new_crc)
+        new_crc = int(new_crc)
+
+        json_crc = crc32(new_json.encode("utf-8"))
+
+        print(new_crc, json_crc)
 
         try:
             decoded_data = json.loads(new_json)

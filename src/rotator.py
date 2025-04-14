@@ -12,10 +12,12 @@ class Rotator():
 
     def set_position_vertical(self, pos: float):
         self.main_port.write("DVER {}\n".format(pos).encode())
+        self.main_port.flush()
 
 
     def set_position_horizontal(self, pos: float):
         self.main_port.write("DHOR {}\n".format(-pos).encode())
+        self.main_port.flush()
 
 
     def calibrate_vertical(self, set = False):
@@ -23,20 +25,25 @@ class Rotator():
         has finished, which can take a very long time"""
         if set:
             self.main_port.write(b"CALV SET\n")
+            self.main_port.flush()
         else:
             self.main_port.write(b"CALV\n")
+            self.main_port.flush()
 
 
     def calibrate_horizontal(self):
         self.main_port.write(b"CALH\n")
+        self.main_port.flush()
 
 
     def move_vertical(self, steps: int):
         self.main_port.write("MOVV {}\n".format(steps).encode())
+        self.main_port.flush()
 
 
     def move_horizontal(self, steps: int):
         self.main_port.write("MOVH {}\n".format(steps).encode())
+        self.main_port.flush()
 
 
     def position(self) -> tuple[float, float]:
