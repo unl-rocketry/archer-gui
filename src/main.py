@@ -6,14 +6,14 @@
 # Lots of useful formulas for things used here:
 # https://www.movable-type.co.uk/scripts/latlong.html
 
-from typing import Any, Optional
+from typing import Any, Callable, Optional, Union
 import customtkinter
 from tkintermapview import TkinterMapView
 import serial
+import serial.tools.list_ports
 from threading import Thread
 import json
 import signal
-from tkinter import ttk
 import tkinter as tk
 
 
@@ -63,17 +63,32 @@ class App(customtkinter.CTk):
         self.frame_left.grid_columnconfigure(0, weight=1)
 
         # Telemetry display
-        self.telemetry = Telemetry(master=self.frame_left, command=self.set_ground_parameters)
+        self.telemetry = Telemetry(self.frame_left, command=self.set_ground_parameters)
         self.telemetry.grid(pady=20)
 
         # Ground position settings
-        self.ground_settings = GroundSettings(master=self.frame_left, command=self.set_ground_parameters)
+        self.ground_settings = GroundSettings(self.frame_left, command=self.set_ground_parameters)
         self.ground_settings.grid()
 
+        customtkinter.CTkLabel(
+            self.frame_left,
+            text="General Settings:",
+            anchor="w",
+            font=("Noto Sans", 18)
+        ).grid(pady=(20, 5))
+
+        self.rotator_port_menu = LabeledSelectMenu(
+            self.frame_left,
+            label_text="Rotator Port",
+        ).grid(pady=(0, 10))
+
         # Map style settings
-        self.map_label = customtkinter.CTkLabel(self.frame_left, text="Map Style:", anchor="w")
-        self.map_label.grid(padx=(20, 20), pady=(20, 0))
-        self.map_option_menu = customtkinter.CTkOptionMenu(self.frame_left, values=["Google hybrid", "Google normal", "Google satellite", "OpenStreetMap"], command=self.change_map)
+        self.map_option_menu = LabeledSelectMenu(
+            self.frame_left,
+            label_text="Map Style",
+            values=["Google hybrid", "Google normal", "Google satellite", "OpenStreetMap"],
+            command=self.change_map
+        )
         self.map_option_menu.grid(padx=(20, 20), pady=(0, 20))
 
         # ============ frame_right ============
@@ -215,6 +230,14 @@ class App(customtkinter.CTk):
         self.destroy()
 
     def start(self):
+        self.port_list = list(
+            filter(lambda p : "ttyS" not in p, map(
+                lambda p : p[0], serial.tools.list_ports.comports())
+            )
+        )
+
+        self.rotator_port_menu.set_values(self.port_list)
+
         try:
             self.rotator = Rotator("/dev/ttyUSB1")
         except IOError:
@@ -296,6 +319,37 @@ class GroundSettings(customtkinter.CTkFrame):
 
         self.button = customtkinter.CTkButton(self, text="Set Ground Settings", command=command)
         self.button.grid(pady=(5, 0))
+
+
+class LabeledSelectMenu(customtkinter.CTkFrame):
+    def __init__(
+            self,
+            master,
+            label_text: str = "",
+            values: Optional[list] | None = None,
+            command: Union[Callable[[str], Any], None] = None,
+            **kwargs):
+        super().__init__(master, **kwargs)
+
+        self.label = customtkinter.CTkLabel(self, text=label_text, anchor="w")
+        self.label.grid(row=0, column=0, padx=10)
+
+        self.option_menu = customtkinter.CTkOptionMenu(
+            self,
+            values=values,
+            command=command,
+            width=20,
+        )
+        self.option_menu.grid(row=0, column=1)
+
+    def set_values(self, values: list[str]):
+        self.option_menu.configure(values=values)
+
+    def set(self, value: str):
+        self.option_menu.set(value)
+
+    def get(self) -> str:
+        return self.option_menu.get()
 
 
 class LabeledTextEntry(customtkinter.CTkFrame):
