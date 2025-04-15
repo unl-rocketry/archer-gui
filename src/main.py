@@ -18,7 +18,7 @@ import tkinter as tk
 
 
 ## LOCAL IMPORTS ##
-from rotator import Rotator
+#from rotator import Rotator
 from utils import GPSPoint, crc32
 
 # Spaceport:    32.940058,  -106.921903
@@ -80,7 +80,8 @@ class App(customtkinter.CTk):
         self.rotator_port_menu = LabeledSelectMenu(
             self.frame_left,
             label_text="Rotator Port",
-        ).grid(pady=(0, 10))
+        )
+        self.rotator_port_menu.grid(pady=(0, 10))
 
         # Map style settings
         self.map_option_menu = LabeledSelectMenu(
@@ -231,17 +232,15 @@ class App(customtkinter.CTk):
 
     def start(self):
         self.port_list = list(
-            filter(lambda p : "ttyS" not in p, map(
+            filter(lambda p : "abdcd" not in p, map(
                 lambda p : p[0], serial.tools.list_ports.comports())
             )
         )
+        self.port_list.insert(0, "Select…")
 
         self.rotator_port_menu.set_values(self.port_list)
 
-        try:
-            self.rotator = Rotator("/dev/ttyUSB1")
-        except IOError:
-            self.rotator = None
+        self.rotator = None
 
         # The ground station position
         self.ground_marker: Optional[Any] = None
@@ -338,12 +337,14 @@ class LabeledSelectMenu(customtkinter.CTkFrame):
             self,
             values=values,
             command=command,
-            width=20,
+            width=150,
+            dynamic_resizing=False,
         )
         self.option_menu.grid(row=0, column=1)
 
     def set_values(self, values: list[str]):
         self.option_menu.configure(values=values)
+        self.option_menu.set(values[0])
 
     def set(self, value: str):
         self.option_menu.set(value)
