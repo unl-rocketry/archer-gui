@@ -11,7 +11,7 @@ import customtkinter
 from tkintermapview import TkinterMapView
 import serial
 import serial.tools.list_ports
-from threading import Thread
+from threading import Event, Thread
 import json
 import signal
 import tkinter as tk
@@ -119,14 +119,18 @@ class App(customtkinter.CTk):
         self.map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}&s=Ga", max_zoom=22)
 
     def set_ports(self):
-        rotator_port = self.rotator_port_menu.get().split(maxsplit=1)[0]
-        self.rotator = Rotator(rotator_port)
-        print(f"Rotator Version {self.rotator.protocol_version}")
+        rotator_port = self.rotator_port_menu.get()
+        if rotator_port != "Select…":
+            rotator_port = rotator_port.split(maxsplit=1)[0]
+            self.rotator = Rotator(rotator_port)
+            print(f"Rotator Version {self.rotator.protocol_version}")
 
-        rfd_port = self.rfd_port_menu.get().split(maxsplit=1)[0]
-
-        t = Thread(target=gps_loop, args=[rfd_port], name="gps_thread")
-        t.start()
+        rfd_port = self.rfd_port_menu.get()
+        if rfd_port != "Select…":
+            rfd_port = rfd_port.split(maxsplit=1)[0]
+            self.rfd_event = Event()
+            t = Thread(target=gps_loop, args=[rfd_port, self.rfd_event], name="gps_thread")
+            t.start()
 
     def rescan_ports(self):
         """ Rescan and update the serial ports """
@@ -256,6 +260,10 @@ class App(customtkinter.CTk):
 
     def on_closing(self, signal=0, frame=None):
         print("Exiting!")
+
+        if self.rfd_event is not None:
+            self.rfd_event.set()
+
         self.destroy()
 
     def start(self):
@@ -263,6 +271,9 @@ class App(customtkinter.CTk):
 
         # By default the rotator is None
         self.rotator = None
+
+        # RFD thread event
+        self.rfd_event = None
 
         # The ground station position
         self.ground_marker: Optional[Any] = None
@@ -395,14 +406,14 @@ class LabeledTextEntry(customtkinter.CTkFrame):
         self.entry.insert(0, string)
 
 
-def gps_loop(gps_port: str):
+def gps_loop(gps_port: str, event: Event):
     try:
-        gps_serial = serial.Serial(gps_port, 57600)
+        gps_serial = serial.Serial(gps_port, 57600, timeout=5)
     except IOError as e:
         print(f"Failed to start GPS loop: {e}")
         return
 
-    while True:
+    while not event.is_set():
         try:
             new_data = gps_serial.readline().decode("utf-8").strip()
         except:  # noqa: E722
