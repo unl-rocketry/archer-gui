@@ -20,7 +20,7 @@ import tkinter as tk
 ## LOCAL IMPORTS ##
 #from rotator import Rotator
 from rotator import Rotator
-from utils import GPSPoint, crc32
+from utils import GPSPoint
 
 # Spaceport:    32.940058,  -106.921903
 # Texas Place:  31.046083,  -103.543556
@@ -129,12 +129,16 @@ class App(customtkinter.CTk):
         t.start()
 
     def rescan_ports(self):
+        """ Rescan and update the serial ports """
         self.port_list = list(
             filter(lambda p : "/dev/ttyS" not in p, map(
                 lambda p : str(p), serial.tools.list_ports.comports())
             )
         )
         self.port_list.insert(0, "Select…")
+
+        self.rotator_port_menu.set_values(self.port_list)
+        self.rfd_port_menu.set_values(self.port_list)
 
     def set_ground_parameters(self):
         try:
@@ -182,7 +186,7 @@ class App(customtkinter.CTk):
         if ROCKET_PACKET_CONT is None or "gps" not in ROCKET_PACKET_CONT:
             self.after(500, self.set_air_position)
             return
-        
+
         if ROCKET_PACKET_CONT["gps"] is None:
             self.after(500, self.set_air_position)
             return
@@ -257,9 +261,7 @@ class App(customtkinter.CTk):
     def start(self):
         self.rescan_ports()
 
-        self.rotator_port_menu.set_values(self.port_list)
-        self.rfd_port_menu.set_values(self.port_list)
-
+        # By default the rotator is None
         self.rotator = None
 
         # The ground station position
@@ -403,7 +405,7 @@ def gps_loop(gps_port: str):
     while True:
         try:
             new_data = gps_serial.readline().decode("utf-8").strip()
-        except:
+        except:  # noqa: E722
             print("Failed to read telemetry")
             continue
 
@@ -412,7 +414,7 @@ def gps_loop(gps_port: str):
 
         try:
             new_crc, new_json = new_data.split(maxsplit=1)
-        except:
+        except:  # noqa: E722
             continue
 
         try:
@@ -420,8 +422,8 @@ def gps_loop(gps_port: str):
             global ROCKET_PACKET_CONT
             ROCKET_PACKET_CONT = decoded_data
             print(decoded_data)
-        except IOError as e:
-            print(f"Failed to decode json: {e}")
+        except:  # noqa: E722
+            print(f"Failed to decode json")
 
 
 
