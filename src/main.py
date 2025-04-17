@@ -122,8 +122,12 @@ class App(customtkinter.CTk):
         rotator_port = self.rotator_port_menu.get()
         if rotator_port != "Select…":
             rotator_port = rotator_port.split(maxsplit=1)[0]
-            self.rotator = Rotator(rotator_port)
-            print(f"Rotator Version {self.rotator.protocol_version}")
+            try:
+                self.rotator = Rotator(rotator_port)
+                print(f"Rotator Version {self.rotator.protocol_version}")
+            except:
+                print("Rotator failed to initalize!")
+
 
         rfd_port = self.rfd_port_menu.get()
         if rfd_port != "Select…":
