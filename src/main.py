@@ -19,6 +19,7 @@ import tkinter as tk
 
 ## LOCAL IMPORTS ##
 #from rotator import Rotator
+from rotator import Rotator
 from utils import GPSPoint, crc32
 
 # Spaceport:    32.940058,  -106.921903
@@ -77,11 +78,12 @@ class App(customtkinter.CTk):
             font=("Noto Sans", 18)
         ).grid(pady=(20, 5))
 
-        self.rotator_port_menu = LabeledSelectMenu(
-            self.frame_left,
-            label_text="Rotator Port",
-        )
+        customtkinter.CTkButton(self.frame_left, text="Rescan Ports", command=self.rescan_ports).grid(pady=10)
+        self.rotator_port_menu = LabeledSelectMenu(self.frame_left, label_text="Rotator Port")
         self.rotator_port_menu.grid(pady=(0, 10))
+        self.rfd_port_menu = LabeledSelectMenu(self.frame_left, label_text="RFD Port")
+        self.rfd_port_menu.grid(pady=(0, 10))
+        customtkinter.CTkButton(self.frame_left, text="Set Ports", command=self.set_ports).grid(pady=10)
 
         # Map style settings
         self.map_option_menu = LabeledSelectMenu(
@@ -115,6 +117,24 @@ class App(customtkinter.CTk):
         self.map_widget.set_zoom(16)
         self.map_option_menu.set("Google hybrid")
         self.map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}&s=Ga", max_zoom=22)
+
+    def set_ports(self):
+        rotator_port = self.rotator_port_menu.get().split(maxsplit=1)[0]
+        self.rotator = Rotator(rotator_port)
+        print(f"Rotator Version {self.rotator.protocol_version}")
+
+        rfd_port = self.rfd_port_menu.get().split(maxsplit=1)[0]
+
+        t = Thread(target=gps_loop, args=[rfd_port], name="gps_thread")
+        t.start()
+
+    def rescan_ports(self):
+        self.port_list = list(
+            filter(lambda p : "/dev/ttyS" not in p, map(
+                lambda p : str(p), serial.tools.list_ports.comports())
+            )
+        )
+        self.port_list.insert(0, "Select…")
 
     def set_ground_parameters(self):
         try:
@@ -160,6 +180,10 @@ class App(customtkinter.CTk):
 
         #print("function ran yay")
         if ROCKET_PACKET_CONT is None or "gps" not in ROCKET_PACKET_CONT:
+            self.after(500, self.set_air_position)
+            return
+        
+        if ROCKET_PACKET_CONT["gps"] is None:
             self.after(500, self.set_air_position)
             return
 
@@ -231,14 +255,10 @@ class App(customtkinter.CTk):
         self.destroy()
 
     def start(self):
-        self.port_list = list(
-            filter(lambda p : "abdcd" not in p, map(
-                lambda p : p[0], serial.tools.list_ports.comports())
-            )
-        )
-        self.port_list.insert(0, "Select…")
+        self.rescan_ports()
 
         self.rotator_port_menu.set_values(self.port_list)
+        self.rfd_port_menu.set_values(self.port_list)
 
         self.rotator = None
 
@@ -375,20 +395,25 @@ class LabeledTextEntry(customtkinter.CTkFrame):
 
 def gps_loop(gps_port: str):
     try:
-        gps_serial = serial.Serial(gps_port, 57600, timeout=1)
+        gps_serial = serial.Serial(gps_port, 57600)
     except IOError as e:
         print(f"Failed to start GPS loop: {e}")
         return
 
     while True:
-        new_data = gps_serial.readline().decode("utf-8").strip()
+        try:
+            new_data = gps_serial.readline().decode("utf-8").strip()
+        except:
+            print("Failed to read telemetry")
+            continue
 
-        new_crc, new_json = new_data.split(maxsplit=1)
-        new_crc = int(new_crc)
+        if len(new_data) == 0:
+            continue
 
-        json_crc = crc32(new_json.encode("utf-8"))
-
-        print(new_crc, json_crc)
+        try:
+            new_crc, new_json = new_data.split(maxsplit=1)
+        except:
+            continue
 
         try:
             decoded_data = json.loads(new_json)
@@ -401,9 +426,6 @@ def gps_loop(gps_port: str):
 
 
 if __name__ == "__main__":
-    t = Thread(target=gps_loop, args=["/dev/ttyUSB0"], name="gps_thread")
-    t.start()
-
     app = App()
 
     # Catch Ctl + C

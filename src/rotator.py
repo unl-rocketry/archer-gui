@@ -18,6 +18,8 @@ class Rotator():
         # The default timeout here is 2 seconds, is that good?
         self.main_port = serial.Serial(port, baud, timeout = 2)
 
+        self.protocol_version = self.version()
+
 
     def set_position(self, pos: tuple[float, float]):
         """ Position in degrees to move to in both the vertical and horizontal axes. """
