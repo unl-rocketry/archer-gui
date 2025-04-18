@@ -20,7 +20,7 @@ import tkinter as tk
 ## LOCAL IMPORTS ##
 #from rotator import Rotator
 from rotator import Rotator
-from utils import GPSPoint
+from utils import GPSPoint, crc32
 
 # Spaceport:    32.940058,  -106.921903
 # Texas Place:  31.046083,  -103.543556
@@ -125,7 +125,7 @@ class App(customtkinter.CTk):
             try:
                 self.rotator = Rotator(rotator_port)
                 print(f"Rotator Version {self.rotator.protocol_version}")
-            except:
+            except: # noqa: E722
                 print("Rotator failed to initalize!")
 
 
@@ -280,11 +280,11 @@ class App(customtkinter.CTk):
         self.rfd_event = None
 
         # The ground station position
-        self.ground_marker: Optional[Any] = None
+        self.ground_marker = None
         self.ground_position = GPSPoint(0, 0, 0)
 
         # Rocket position
-        self.air_marker: Optional[Any] = None
+        self.air_marker = None
         self.air_position = GPSPoint(0, 0, 0)
 
         self.after(500, self.set_air_position)
@@ -429,6 +429,8 @@ def gps_loop(gps_port: str, event: Event):
 
         try:
             new_crc, new_json = new_data.split(maxsplit=1)
+            cal_crc = crc32(new_json.strip())
+            print(f"New CRC: {new_crc}\nCal CRC: {cal_crc}")
         except:  # noqa: E722
             continue
 
@@ -438,7 +440,7 @@ def gps_loop(gps_port: str, event: Event):
             ROCKET_PACKET_CONT = decoded_data
             print(decoded_data)
         except:  # noqa: E722
-            print(f"Failed to decode json")
+            print("Failed to decode json")
 
 
 
