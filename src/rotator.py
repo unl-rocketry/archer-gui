@@ -1,3 +1,7 @@
+## 2025, UNL Aerospace Club
+## Licensed under the GNU General Public License version 3
+
+from enum import Enum
 from typing import Optional
 import serial
 
@@ -7,6 +11,18 @@ class RotatorException(BaseException):
 
 class RotatorInvalidResponse(RotatorException):
     """ A response from the rotator was invalid or did not meet expectations. """
+
+
+class MovementCommand(Enum):
+    # Vertical
+    UP = "UP"
+    DOWN = "DN"
+    STOP_VERTICAL = "SV"
+
+    # Horizontal
+    LEFT = "LT"
+    RIGHT = "RT"
+    STOP_HORIZONTAL = "SH"
 
 
 class Rotator():
@@ -21,24 +37,23 @@ class Rotator():
         # This serves as a connection test
         self.protocol_version = self.version()
 
+        self.is_calibrated = self.calibrated()
+
 
     def set_position(self, pos: tuple[float, float]):
         """ Position in degrees to move to in both the vertical and horizontal axes. """
         self.set_position_vertical(pos[0])
         self.set_position_horizontal(pos[1])
 
-
     def set_position_vertical(self, pos: float):
         """ Position in degrees to move to in the vertical axis. """
         self.main_port.write(f"DVER {pos}\n".encode())
         self.__validate_parse()
 
-
     def set_position_horizontal(self, pos: float):
         """ Position in degrees to move to in the horizontal axis. """
         self.main_port.write(f"DHOR {-pos}\n".encode())
         self.__validate_parse()
-
 
     def calibrate_vertical(self, set: Optional[bool] = False):
         """ Calibrate vertical axis. """
@@ -48,24 +63,25 @@ class Rotator():
             self.main_port.write(b"CALV\n")
         self.__validate_parse()
 
-
     def calibrate_horizontal(self):
         """ Calibrate horizontal axis. """
         self.main_port.write(b"CALH\n")
         self.__validate_parse()
 
+    def move(self, command: MovementCommand):
+        """ Moves in a direction specified by the command, or stops, if the command is to stop. """
+        self.main_port.write(f"MOVC {command.value}\n".encode())
+        self.__validate_parse()
 
-    def move_vertical(self, steps: int):
+    def move_vertical_steps(self, steps: int):
         """ Moves by the specified number of steps in the vertical axis. """
         self.main_port.write(f"MOVV {steps}\n".encode())
         self.__validate_parse()
 
-
-    def move_horizontal(self, steps: int):
+    def move_horizontal_steps(self, steps: int):
         """ Moves by the specified number of steps in the horizontal axis. """
         self.main_port.write(f"MOVH {steps}\n".encode())
         self.__validate_parse()
-
 
     def position(self) -> tuple[float, float]:
         """ Gets the current position for both the vertical and horizontal axes. """
@@ -74,13 +90,23 @@ class Rotator():
 
         return (float(result[0]), float(result[1]))
 
+    def calibrated(self) -> bool:
+        """ Gets the calibration status of the dish. This must be true to use
+        `set_position_vertical` and `set_position_horizontal` """
+        self.main_port.write(b"GETC\n")
+        result = self.__validate_parse(1)
+        return result[0] == "true"
 
     def version(self) -> str:
-        """ Gets the version of the protocol in use. """
+        """ Gets the current version of the software on the dish. """
         self.main_port.write(b"VERS\n")
         result = self.__validate_parse(1)
         return result[0]
 
+    def halt(self):
+        """ Immediately stops both motors by locking them to perform an emergency stop.  """
+        self.main_port.write(b"HALT\n")
+        self.__validate_parse()
 
     def __validate_parse(self, count_expected: Optional[int] = None) -> list:
         _echo = self.main_port.readline() # We can also verify this at some point
@@ -101,7 +127,6 @@ class Rotator():
             raise RotatorInvalidResponse
 
         return response_list
-
 
     def __dump_input(self):
         self.main_port.reset_input_buffer()

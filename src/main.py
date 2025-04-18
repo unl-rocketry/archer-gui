@@ -136,6 +136,9 @@ class App(customtkinter.CTk):
 
     def rescan_ports(self):
         """ Rescan and update the serial ports """
+        self.rotator_port_menu.option_menu.configure(state="disabled")
+        self.rfd_port_menu.option_menu.configure(state="disabled")
+
         self.port_list = list(
             filter(lambda p : "/dev/ttyS" not in p, map(
                 lambda p : str(p), serial.tools.list_ports.comports())
@@ -145,6 +148,9 @@ class App(customtkinter.CTk):
 
         self.rotator_port_menu.set_values(self.port_list)
         self.rfd_port_menu.set_values(self.port_list)
+
+        self.rotator_port_menu.option_menu.configure(state="normal")
+        self.rfd_port_menu.option_menu.configure(state="normal")
 
     def set_ground_parameters(self):
         try:
@@ -440,6 +446,9 @@ def gps_loop(gps_port: str, event: Event):
             print(decoded_data)
         except:  # noqa: E722
             print("Failed to decode json")
+
+    # Close the serial port
+    gps_serial.close()
 
 
 
