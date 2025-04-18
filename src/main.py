@@ -71,21 +71,17 @@ class App(customtkinter.CTk):
         self.ground_settings = GroundSettings(self.frame_left, command=self.set_ground_parameters)
         self.ground_settings.grid()
 
-        customtkinter.CTkLabel(
-            self.frame_left,
-            text="General Settings:",
-            anchor="w",
-            font=("Noto Sans", 18)
-        ).grid(pady=(20, 5))
+        customtkinter.CTkLabel(self.frame_left, text="Port Settings:", anchor="w", font=("Noto Sans", 18)).grid(pady=(20, 5))
 
-        customtkinter.CTkButton(self.frame_left, text="Rescan Ports", command=self.rescan_ports).grid(pady=10)
         self.rotator_port_menu = LabeledSelectMenu(self.frame_left, label_text="Rotator Port")
         self.rotator_port_menu.grid(pady=(0, 10))
         self.rfd_port_menu = LabeledSelectMenu(self.frame_left, label_text="RFD Port")
         self.rfd_port_menu.grid(pady=(0, 10))
+        customtkinter.CTkButton(self.frame_left, text="Rescan Ports", command=self.rescan_ports).grid()
         customtkinter.CTkButton(self.frame_left, text="Set Ports", command=self.set_ports).grid(pady=10)
 
         # Map style settings
+        customtkinter.CTkLabel(self.frame_left, text="Map Settings:", anchor="w", font=("Noto Sans", 18)).grid(pady=(20, 5))
         self.map_option_menu = LabeledSelectMenu(
             self.frame_left,
             label_text="Map Style",
@@ -124,10 +120,12 @@ class App(customtkinter.CTk):
             rotator_port = rotator_port.split(maxsplit=1)[0]
             try:
                 self.rotator = Rotator(rotator_port)
-                print(f"Rotator Version {self.rotator.protocol_version}")
+                print(f"Rotator protocol v{self.rotator.protocol_version}")
             except: # noqa: E722
                 print("Rotator failed to initalize!")
 
+        if self.rfd_event is not None:
+            self.rfd_event.set()
 
         rfd_port = self.rfd_port_menu.get()
         if rfd_port != "Select…":
@@ -412,11 +410,12 @@ class LabeledTextEntry(customtkinter.CTkFrame):
 
 def gps_loop(gps_port: str, event: Event):
     try:
-        gps_serial = serial.Serial(gps_port, 57600, timeout=5)
+        gps_serial = serial.Serial(gps_port, 57600, timeout=1)
     except IOError as e:
         print(f"Failed to start GPS loop: {e}")
         return
 
+    # Ignoring the errors in this is OK because it must not crash!
     while not event.is_set():
         try:
             new_data = gps_serial.readline().decode("utf-8").strip()
