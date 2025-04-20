@@ -133,6 +133,7 @@ class App(customtkinter.CTk):
             self.rfd_event = Event()
             t = Thread(target=gps_loop, args=[rfd_port, self.rfd_event], name="gps_thread")
             t.start()
+            print("RFD Setup")
 
     def rescan_ports(self):
         """ Rescan and update the serial ports """
@@ -203,9 +204,14 @@ class App(customtkinter.CTk):
             self.after(500, self.set_air_position)
             return
 
-        gps_lat = ROCKET_PACKET_CONT["gps"]["latitude"]
-        gps_lon = ROCKET_PACKET_CONT["gps"]["longitude"]
-        gps_alt = ROCKET_PACKET_CONT["gps"]["altitude"]
+        try:
+            gps_lat = ROCKET_PACKET_CONT["gps"]["latitude"]
+            gps_lon = ROCKET_PACKET_CONT["gps"]["longitude"]
+            gps_alt = ROCKET_PACKET_CONT["gps"]["altitude"]
+        except: 
+            print("Not all fields available")
+            self.after(500, self.set_air_position)
+            return
 
         self.telemetry.lat.configure(text=f"{gps_lat:.8f}")
         self.telemetry.lon.configure(text=f"{gps_lon:.8f}")
@@ -420,6 +426,8 @@ def gps_loop(gps_port: str, event: Event):
     except IOError as e:
         print(f"Failed to start GPS loop: {e}")
         return
+    
+    print("Started GPS loop")
 
     # Ignoring the errors in this is OK because it must not crash!
     while not event.is_set():
@@ -434,9 +442,8 @@ def gps_loop(gps_port: str, event: Event):
 
         try:
             new_crc, new_json = new_data.split(maxsplit=1)
-            cal_crc = crc32(new_json.strip())
-            print(f"New CRC: {new_crc}\nCal CRC: {cal_crc}")
         except:  # noqa: E722
+            print("Splitting failed")
             continue
 
         try:
