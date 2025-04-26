@@ -20,7 +20,7 @@ import tkinter as tk
 ## LOCAL IMPORTS ##
 #from rotator import Rotator
 from rotator import Rotator
-from utils import GPSPoint, crc32
+from utils import GPSPoint, crc8
 
 # Spaceport:    32.940058,  -106.921903
 # Texas Place:  31.046083,  -103.543556
@@ -208,8 +208,8 @@ class App(customtkinter.CTk):
             gps_lat = ROCKET_PACKET_CONT["gps"]["latitude"]
             gps_lon = ROCKET_PACKET_CONT["gps"]["longitude"]
             gps_alt = ROCKET_PACKET_CONT["gps"]["altitude"]
-        except: 
-            print("Not all fields available")
+        except Exception as e:
+            print(f"Not all fields available: {e}")
             self.after(500, self.set_air_position)
             return
 
@@ -426,33 +426,43 @@ def gps_loop(gps_port: str, event: Event):
     except IOError as e:
         print(f"Failed to start GPS loop: {e}")
         return
-    
+
     print("Started GPS loop")
 
     # Ignoring the errors in this is OK because it must not crash!
     while not event.is_set():
         try:
             new_data = gps_serial.readline().decode("utf-8").strip()
-        except:  # noqa: E722
-            print("Failed to read telemetry")
+        except Exception as e:
+            print(f"Failed to read telemetry: {e}")
             continue
 
         if len(new_data) == 0:
             continue
 
         try:
-            new_crc, new_json = new_data.split(maxsplit=1)
-        except:  # noqa: E722
-            print("Splitting failed")
+            received_crc, received_json = new_data.split(maxsplit=1)
+        except Exception as e:
+            print(f"Splitting failed: {e}")
             continue
 
+
+        # Calculate CRC from the data
         try:
-            decoded_data = json.loads(new_json)
+            calculated_crc = crc8(received_json.encode("utf-8"))
+            print(calculated_crc, received_crc)
+        except Exception as e:
+            print(f"Could not calculate new CRC: {e}")
+            continue
+
+        # Load the data as JSON and add it to the packet
+        try:
+            decoded_data = json.loads(received_json)
             global ROCKET_PACKET_CONT
             ROCKET_PACKET_CONT = decoded_data
             print(decoded_data)
-        except:  # noqa: E722
-            print("Failed to decode json")
+        except Exception as e:
+            print(f"Failed to decode json: {e}")
 
     # Close the serial port
     gps_serial.close()
