@@ -18,7 +18,6 @@ import tkinter as tk
 
 
 ## LOCAL IMPORTS ##
-#from rotator import Rotator
 from rotator import Rotator
 from utils import GPSPoint, crc8
 
@@ -288,7 +287,6 @@ class App(customtkinter.CTk):
 
         # By default the rotator is None
         self.rotator = None
-
         # RFD thread event
         self.rfd_event = None
 
@@ -304,11 +302,18 @@ class App(customtkinter.CTk):
 
         self.mainloop()
 
-class RotatorCommandWindow(customtkinter.CTk):
+class RotatorCommandWindow(customtkinter.CTkToplevel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.title("Rotator Commands")
         self.geometry(str(App.WIDTH) + "x" + str(App.HEIGHT))
+
+        self.calbutton = customtkinter.CTkButton(self, text="Calibrate Vertical", command=self.calibrate)
+        self.calbutton.grid(pady=10)
+
+    def calibrate(Self):
+        if App.rotator is not None:
+            App.rotator.calibrate_vertical()
 
 
 class Telemetry(customtkinter.CTkFrame):
