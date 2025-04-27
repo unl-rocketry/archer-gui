@@ -5,7 +5,7 @@
 #
 # Lots of useful formulas for things used here:
 # https://www.movable-type.co.uk/scripts/latlong.html
-
+from tkinter.ttk import Label, Button
 from typing import Any, Callable, Optional, Union
 import customtkinter
 from tkintermapview import TkinterMapView
@@ -79,6 +79,9 @@ class App(customtkinter.CTk):
         self.rfd_port_menu.grid(pady=(0, 10))
         customtkinter.CTkButton(self.frame_left, text="Rescan Ports", command=self.rescan_ports).grid()
         customtkinter.CTkButton(self.frame_left, text="Set Ports", command=self.set_ports).grid(pady=10)
+
+        self.rotatorCommandWindow = customtkinter.CTkButton(self.frame_left, text="Rotator Commands", command=RotatorCommandWindow)
+        self.rotatorCommandWindow.grid(pady=10)
 
         # Map style settings
         customtkinter.CTkLabel(self.frame_left, text="Map Settings:", anchor="w", font=("Noto Sans", 18)).grid(pady=(20, 5))
@@ -300,6 +303,12 @@ class App(customtkinter.CTk):
         self.after(500, self.set_air_position)
 
         self.mainloop()
+
+class RotatorCommandWindow(customtkinter.CTk):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.title("Rotator Commands")
+        self.geometry(str(App.WIDTH) + "x" + str(App.HEIGHT))
 
 
 class Telemetry(customtkinter.CTkFrame):
