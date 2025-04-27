@@ -22,10 +22,10 @@ import tkinter as tk
 from rotator import Rotator
 from utils import GPSPoint, crc8
 
-toml = tomlkit.load(open("ground_location.toml", "r", encoding="utf-8"))
-DEFAULT_LAT = float(toml.item("latitude"))
-DEFAULT_LON = float(toml.item("longitude"))
-DEFAULT_ALT = float(toml.item("altitude"))
+GROUND_POS_JSON = tomlkit.load(open("ground_location.toml", "r", encoding="utf-8"))
+DEFAULT_LAT = float(GROUND_POS_JSON.item("latitude"))
+DEFAULT_LON = float(GROUND_POS_JSON.item("longitude"))
+DEFAULT_ALT = float(GROUND_POS_JSON.item("altitude"))
 
 # Global variable storing rocket packet datas
 ROCKET_PACKET_CONT = None
@@ -160,14 +160,19 @@ class App(customtkinter.CTk):
             lat_str = self.ground_settings.latitude.get()
             if lat_str is not None and lat_str != '':
                 self.ground_position.lat = float(lat_str)
+                GROUND_POS_JSON["latitude"] = float(lat_str)
 
             lon_str = self.ground_settings.longitude.get()
             if lon_str is not None and lon_str != '':
                 self.ground_position.lon = float(lon_str)
+                GROUND_POS_JSON["longitude"] = float(lon_str)
 
             alt_str = self.ground_settings.altitude.get()
             if alt_str is not None and alt_str != '':
                 self.ground_position.alt = float(alt_str)
+                GROUND_POS_JSON["altitude"] = float(alt_str)
+
+            tomlkit.dump(GROUND_POS_JSON, open("ground_location.toml", "w", encoding="utf-8"))
         except ValueError as e:
             print(f"Invalid value! {e}")
 
@@ -192,8 +197,12 @@ class App(customtkinter.CTk):
         self.ground_position = GPSPoint(coords[0], coords[1], self.ground_position.alt)
 
         self.ground_settings.latitude.set(coords[0])
+        GROUND_POS_JSON["latitude"] = float(coords[0])
         self.ground_settings.longitude.set(coords[1])
+        GROUND_POS_JSON["longitude"] = float(coords[1])
         self.ground_settings.altitude.set(str(self.ground_position.alt))
+
+        tomlkit.dump(GROUND_POS_JSON, open("ground_location.toml", "w", encoding="utf-8"))
 
     def set_air_position(self):
 
@@ -276,6 +285,8 @@ class App(customtkinter.CTk):
 
     def on_closing(self, signal=0, frame=None):
         print("Exiting!")
+
+        tomlkit.dump(GROUND_POS_JSON, open("ground_location.toml", "w", encoding="utf-8"))
 
         if self.rfd_event is not None:
             self.rfd_event.set()
