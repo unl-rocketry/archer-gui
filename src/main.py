@@ -8,6 +8,7 @@
 from tkinter.ttk import Label, Button
 from typing import Any, Callable, Optional, Union
 import customtkinter
+import tomlkit
 from tkintermapview import TkinterMapView
 import serial
 import serial.tools.list_ports
@@ -21,14 +22,12 @@ import tkinter as tk
 from rotator import Rotator
 from utils import GPSPoint, crc8
 
-# Spaceport:    32.940058,  -106.921903
-# Texas Place:  31.046083,  -103.543556
-# Lincoln:      40.82320,    -96.69693
-DEFAULT_LAT = 40.82320      #TODO get this value from JSON
-DEFAULT_LON = -96.69693     #TODO get this value from JSON
-DEFAULT_ALT = 400           #TODO get this value from JSON
+toml = tomlkit.load(open("ground_location.toml", "r", encoding="utf-8"))
+DEFAULT_LAT = float(toml.item("latitude"))
+DEFAULT_LON = float(toml.item("longitude"))
+DEFAULT_ALT = float(toml.item("altitude"))
 
-# Global variable storing rocket packet data
+# Global variable storing rocket packet datas
 ROCKET_PACKET_CONT = None
 
 class App(customtkinter.CTk):
