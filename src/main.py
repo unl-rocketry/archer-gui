@@ -24,8 +24,9 @@ from utils import GPSPoint, crc8
 # Spaceport:    32.940058,  -106.921903
 # Texas Place:  31.046083,  -103.543556
 # Lincoln:      40.82320,    -96.69693
-DEFAULT_LAT = 40.82320
-DEFAULT_LON = -96.69693
+DEFAULT_LAT = 40.82320      #TODO get this value from JSON
+DEFAULT_LON = -96.69693     #TODO get this value from JSON
+DEFAULT_ALT = 400           #TODO get this value from JSON
 
 # Global variable storing rocket packet data
 ROCKET_PACKET_CONT = None
@@ -292,7 +293,7 @@ class App(customtkinter.CTk):
 
         # The ground station position
         self.ground_marker = None
-        self.ground_position = GPSPoint(40.82320, -96.69693, 400)
+        self.ground_position = GPSPoint(DEFAULT_LAT, DEFAULT_LON, DEFAULT_ALT)
         self.set_ground_parameters()
 
         # Rocket position
@@ -369,13 +370,16 @@ class GroundSettings(customtkinter.CTkFrame):
             font=("Noto Sans", 18)
         ).grid(pady=(0, 5))
 
-        self.latitude = LabeledTextEntry(self, label_text="Latitude", placeholder_text="40.82320")
+        current_ground_lat = str(DEFAULT_LAT)
+        self.latitude = LabeledTextEntry(self, label_text="Latitude", placeholder_text=current_ground_lat)
         self.latitude.grid(pady=2.5, padx=5, sticky="w")
 
-        self.longitude = LabeledTextEntry(self, label_text="Longitude", placeholder_text="-96.69693")
+        current_ground_long = str(DEFAULT_LON)
+        self.longitude = LabeledTextEntry(self, label_text="Longitude", placeholder_text=current_ground_long)
         self.longitude.grid(pady=2.5, padx=5, sticky="w")
 
-        self.altitude = LabeledTextEntry(self, label_text="Altitude", placeholder_text="400")
+        current_alt = str(DEFAULT_ALT)
+        self.altitude = LabeledTextEntry(self, label_text="Altitude", placeholder_text=current_alt)
         self.altitude.grid(pady=2.5, padx=5, sticky="w")
 
         self.button = customtkinter.CTkButton(self, text="Set Ground Settings", command=command)
