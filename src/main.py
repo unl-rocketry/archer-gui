@@ -5,7 +5,6 @@
 #
 # Lots of useful formulas for things used here:
 # https://www.movable-type.co.uk/scripts/latlong.html
-from tkinter.ttk import Label, Button
 from typing import Any, Callable, Optional, Union
 import customtkinter
 import tomlkit
