@@ -292,7 +292,8 @@ class App(customtkinter.CTk):
 
         # The ground station position
         self.ground_marker = None
-        self.ground_position = GPSPoint(0, 0, 0)
+        self.ground_position = GPSPoint(40.82320, -96.69693, 400)
+        self.set_ground_parameters()
 
         # Rocket position
         self.air_marker = None
@@ -366,19 +367,34 @@ class GroundSettings(customtkinter.CTkFrame):
             text="Ground Settings:",
             anchor="w",
             font=("Noto Sans", 18)
-        ).grid(pady=(0, 5))
+        ).grid(pady=(0, 5), row=0, columnspan=2)
 
         self.latitude = LabeledTextEntry(self, label_text="Latitude")
-        self.latitude.grid(pady=2.5, padx=5, sticky="w")
+        self.latitude.grid(pady=2.5, padx=5, sticky="w", row=1, column=0)
+
+        customtkinter.CTkLabel(
+            self,
+            text="40.82320",
+        ).grid(pady=2.5, padx=10, sticky="w",row=1, column=1)
 
         self.longitude = LabeledTextEntry(self, label_text="Longitude")
-        self.longitude.grid(pady=2.5, padx=5, sticky="w")
+        self.longitude.grid(pady=2.5, padx=5, sticky="w", row=2, column=0)
+
+        customtkinter.CTkLabel(
+            self,
+            text="-96.69693",
+        ).grid(pady=2.5, padx=10, sticky="w", row=2, column=1)
 
         self.altitude = LabeledTextEntry(self, label_text="Altitude")
-        self.altitude.grid(pady=2.5, padx=5, sticky="w")
+        self.altitude.grid(pady=2.5, padx=5, sticky="w", row=3, column=0)
+
+        customtkinter.CTkLabel(
+            self,
+            text="400",
+        ).grid(pady=2.5, padx=10, sticky="w", row=3, column=1)
 
         self.button = customtkinter.CTkButton(self, text="Set Ground Settings", command=command)
-        self.button.grid(pady=(5, 0))
+        self.button.grid(pady=(5, 0), row=4, columnspan=2)
 
 
 class LabeledSelectMenu(customtkinter.CTkFrame):
