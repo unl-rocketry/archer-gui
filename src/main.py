@@ -5,6 +5,7 @@
 #
 # Lots of useful formulas for things used here:
 # https://www.movable-type.co.uk/scripts/latlong.html
+import pathlib
 from typing import Any, Callable, Optional, Union
 import customtkinter
 import tomlkit
@@ -21,7 +22,16 @@ import tkinter as tk
 from rotator import Rotator
 from utils import GPSPoint, crc8
 
-GROUND_POS_TOML = tomlkit.load(open("ground_location.toml", "r", encoding="utf-8"))
+if pathlib.Path("./ground_location.toml").is_file():
+    GROUND_POS_TOML = tomlkit.load(open("ground_location.toml", "r", encoding="utf-8"))
+else:
+    GROUND_POS_TOML = tomlkit.TOMLDocument()
+    GROUND_POS_TOML.add("latitude", 0)
+    GROUND_POS_TOML.add("longitude", 0)
+    GROUND_POS_TOML.add("altitude", 0)
+    print(GROUND_POS_TOML)
+    tomlkit.dump(GROUND_POS_TOML, open("ground_location.toml", "w+", encoding="utf-8"))
+
 DEFAULT_LAT = float(GROUND_POS_TOML.item("latitude"))
 DEFAULT_LON = float(GROUND_POS_TOML.item("longitude"))
 DEFAULT_ALT = float(GROUND_POS_TOML.item("altitude"))
