@@ -116,4 +116,7 @@ def crc8(data: bytes) -> int:
             else:
                 crc <<= 1
 
+            # Truncate the CRC value to 8 bits
+            crc &= 0xFF
+
     return crc
