@@ -5,9 +5,10 @@
 #
 # Lots of useful formulas for things used here:
 # https://www.movable-type.co.uk/scripts/latlong.html
-from tkinter.ttk import Label, Button
+import pathlib
 from typing import Any, Callable, Optional, Union
 import customtkinter
+import tomlkit
 from tkintermapview import TkinterMapView
 import serial
 import serial.tools.list_ports
@@ -21,13 +22,7 @@ import tkinter as tk
 from rotator import Rotator
 from utils import GPSPoint, crc8
 
-# Spaceport:    32.940058,  -106.921903
-# Texas Place:  31.046083,  -103.543556
-# Lincoln:      40.82320,    -96.69693
-DEFAULT_LAT = 40.82320
-DEFAULT_LON = -96.69693
-
-# Global variable storing rocket packet data
+# Global variable storing rocket packet datas
 ROCKET_PACKET_CONT = None
 
 class App(customtkinter.CTk):
@@ -110,12 +105,6 @@ class App(customtkinter.CTk):
             pass_coords=True
         )
 
-        # Set default value
-        self.map_widget.set_position(DEFAULT_LAT, DEFAULT_LON)
-        self.map_widget.set_zoom(16)
-        self.map_option_menu.set("Google hybrid")
-        self.map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}&s=Ga", max_zoom=22)
-
     def set_ports(self):
         rotator_port = self.rotator_port_menu.get()
         if rotator_port != "Select…":
@@ -160,14 +149,19 @@ class App(customtkinter.CTk):
             lat_str = self.ground_settings.latitude.get()
             if lat_str is not None and lat_str != '':
                 self.ground_position.lat = float(lat_str)
+                self.GROUND_POS_TOML["latitude"] = float(lat_str)
 
             lon_str = self.ground_settings.longitude.get()
             if lon_str is not None and lon_str != '':
                 self.ground_position.lon = float(lon_str)
+                self.GROUND_POS_TOML["longitude"] = float(lon_str)
 
             alt_str = self.ground_settings.altitude.get()
             if alt_str is not None and alt_str != '':
                 self.ground_position.alt = float(alt_str)
+                self.GROUND_POS_TOML["altitude"] = float(alt_str)
+
+            tomlkit.dump(self.GROUND_POS_TOML, open("ground_location.toml", "w", encoding="utf-8"))
         except ValueError as e:
             print(f"Invalid value! {e}")
 
@@ -192,8 +186,12 @@ class App(customtkinter.CTk):
         self.ground_position = GPSPoint(coords[0], coords[1], self.ground_position.alt)
 
         self.ground_settings.latitude.set(coords[0])
+        self.GROUND_POS_TOML["latitude"] = float(coords[0])
         self.ground_settings.longitude.set(coords[1])
+        self.GROUND_POS_TOML["longitude"] = float(coords[1])
         self.ground_settings.altitude.set(str(self.ground_position.alt))
+
+        tomlkit.dump(self.GROUND_POS_TOML, open("ground_location.toml", "w", encoding="utf-8"))
 
     def set_air_position(self):
 
@@ -277,6 +275,8 @@ class App(customtkinter.CTk):
     def on_closing(self, signal=0, frame=None):
         print("Exiting!")
 
+        tomlkit.dump(self.GROUND_POS_TOML, open("ground_location.toml", "w", encoding="utf-8"))
+
         if self.rfd_event is not None:
             self.rfd_event.set()
 
@@ -290,9 +290,34 @@ class App(customtkinter.CTk):
         # RFD thread event
         self.rfd_event = None
 
+        #
+        if pathlib.Path("./ground_location.toml").is_file():
+            self.GROUND_POS_TOML = tomlkit.load(open("ground_location.toml", "r", encoding="utf-8"))
+        else:
+            self.GROUND_POS_TOML = tomlkit.TOMLDocument()
+            self.GROUND_POS_TOML.add("latitude", 0)
+            self.GROUND_POS_TOML.add("longitude", 0)
+            self.GROUND_POS_TOML.add("altitude", 0)
+            print(self.GROUND_POS_TOML)
+            tomlkit.dump(self.GROUND_POS_TOML, open("ground_location.toml", "w+", encoding="utf-8"))
+
+        self.DEFAULT_LAT = float(self.GROUND_POS_TOML.item("latitude"))
+        self.DEFAULT_LON = float(self.GROUND_POS_TOML.item("longitude"))
+        self.DEFAULT_ALT = float(self.GROUND_POS_TOML.item("altitude"))
+
+        # Set default value
+        self.map_widget.set_position(self.DEFAULT_LAT, self.DEFAULT_LON)
+        self.map_widget.set_zoom(16)
+        self.map_option_menu.set("Google hybrid")
+        self.map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}&s=Ga", max_zoom=22)
+
         # The ground station position
         self.ground_marker = None
-        self.ground_position = GPSPoint(0, 0, 0)
+        self.ground_position = GPSPoint(self.DEFAULT_LAT, self.DEFAULT_LON, self.DEFAULT_ALT)
+        self.ground_settings.latitude.set(str(self.DEFAULT_LAT))
+        self.ground_settings.longitude.set(str(self.DEFAULT_LON))
+        self.ground_settings.altitude.set(str(self.DEFAULT_ALT))
+        self.set_ground_parameters()
 
         # Rocket position
         self.air_marker = None
