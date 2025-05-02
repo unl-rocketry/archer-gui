@@ -487,12 +487,19 @@ def gps_loop(gps_port: str, event: Event):
 
 
         # Calculate CRC from the data
+        calculated_crc = None
         try:
             calculated_crc = crc8(received_json.encode("utf-8"))
-            print(calculated_crc, received_crc)
         except Exception as e:
             print(f"Could not calculate new CRC: {e}")
             continue
+
+        # Compare CRCs if they exist and work
+        if calculated_crc is not None and calculated_crc != received_crc:
+            print(f"CRCs do not match ({calculated_crc} != {received_crc})")
+            continue
+        else:
+            print(f"CRCs match ({calculated_crc} == {received_crc})")
 
         # Load the data as JSON and add it to the packet
         try:
