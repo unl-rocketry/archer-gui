@@ -489,6 +489,7 @@ def gps_loop(gps_port: str, event: Event):
 
         try:
             received_crc, received_json = new_data.split(maxsplit=1)
+            received_crc = int(received_crc)
         except Exception as e:
             print(f"Splitting failed: {e}")
             continue
@@ -503,7 +504,7 @@ def gps_loop(gps_port: str, event: Event):
             continue
 
         # Compare CRCs if they exist and work
-        if calculated_crc is not None and calculated_crc != received_crc:
+        if calculated_crc != received_crc:
             print(f"CRCs do not match ({calculated_crc} != {received_crc})")
             continue
         else:
