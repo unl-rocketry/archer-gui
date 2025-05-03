@@ -74,7 +74,7 @@ class App(customtkinter.CTk):
         customtkinter.CTkButton(self.frame_left, text="Rescan Ports", command=self.rescan_ports).grid()
         customtkinter.CTkButton(self.frame_left, text="Set Ports", command=self.set_ports).grid(pady=10)
 
-        self.rotatorCommandWindow = customtkinter.CTkButton(self.frame_left, text="Rotator Commands", command=RotatorCommandWindow)
+        self.rotatorCommandWindow = customtkinter.CTkButton(self.frame_left, text="Rotator Commands", command=RotatorCommandWindow(self.rotator))
         self.rotatorCommandWindow.grid(pady=10)
 
         # Map style settings
@@ -327,18 +327,26 @@ class App(customtkinter.CTk):
 
         self.mainloop()
 
-class RotatorCommandWindow(customtkinter.CTkToplevel):
+class RotatorCommandWindow(customtkinter.CTkToplevel, Rotator):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.rotator = Rotator
         self.title("Rotator Commands")
         self.geometry(str(App.WIDTH) + "x" + str(App.HEIGHT))
 
         self.calbutton = customtkinter.CTkButton(self, text="Calibrate Vertical", command=self.calibrate)
         self.calbutton.grid(pady=10)
 
-    def calibrate(Self):
-        if App.rotator is not None:
-            App.rotator.calibrate_vertical()
+        # self.movv = customtkinter.CTKButton(self, text="Move Vertical", command=self.movv)
+
+    def calibrate(self, Rotator):
+        if Rotator is not None:
+            Rotator.calibrate_vertical(self.rotator)
+
+    def movv(self, Rotator):
+        if Rotator is not None:
+            Rotator.move(Rotator, "UP")
 
 
 class Telemetry(customtkinter.CTkFrame):
