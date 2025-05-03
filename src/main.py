@@ -515,6 +515,11 @@ def gps_loop(gps_port: str, event: Event):
             global ROCKET_PACKET_CONT
             ROCKET_PACKET_CONT = decoded_data
             print(decoded_data)
+            try:
+                with open("packet_log.txt", "a") as packetlog:
+                    packetlog.write(decoded_data)
+            except:
+                print("saving txt failed")
         except Exception as e:
             print(f"Failed to decode json: {e}")
 
