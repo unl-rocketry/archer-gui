@@ -5,6 +5,7 @@
 #
 # Lots of useful formulas for things used here:
 # https://www.movable-type.co.uk/scripts/latlong.html
+
 import pathlib
 from typing import Any, Callable, Optional, Union
 import customtkinter
@@ -20,10 +21,12 @@ import datetime
 
 ## LOCAL IMPORTS ##
 from rotator import Rotator
+from rotator_command import RotatorCommandWindow
 from utils import GPSPoint, crc8
+###################
 
-# Global variable storing rocket packet datas
 ROCKET_PACKET_CONT = None
+"""Global variable storing rocket packet data"""
 
 class App(customtkinter.CTk):
 
@@ -72,10 +75,28 @@ class App(customtkinter.CTk):
         self.rfd_port_menu = LabeledSelectMenu(self.frame_left, label_text="RFD Port")
         self.rfd_port_menu.grid(pady=(0, 10))
         customtkinter.CTkButton(self.frame_left, text="Rescan Ports", command=self.rescan_ports).grid()
-        customtkinter.CTkButton(self.frame_left, text="Set Ports", command=self.set_ports).grid(pady=10)
 
-        #self.rotatorCommandWindow = customtkinter.CTkButton(self.frame_left, text="Rotator Commands", command=RotatorCommandWindow(self.rotator))
-        #self.rotatorCommandWindow.grid(pady=10)
+        self.set_buttons_frame = customtkinter.CTkFrame(self.frame_left, corner_radius=0, fg_color="transparent")
+        self.set_buttons_frame.grid()
+        customtkinter.CTkButton(
+            self.set_buttons_frame,
+            text="Set RFD",
+            width=50,
+            command=self.set_telemetry
+        ).grid(pady=10, padx=5, column=0, row=0)
+        customtkinter.CTkButton(
+            self.set_buttons_frame,
+            text="Set Rotator",
+            width=50,
+            command=self.set_rotator
+        ).grid(pady=10,  padx=5, column=1, row=0)
+
+        self.rotator_command_window_button = customtkinter.CTkButton(
+            self.frame_left,
+            text="Rotator Commands",
+            command=lambda : RotatorCommandWindow(self.rotator)
+        )
+        self.rotator_command_window_button.grid(pady=10)
 
         # Map style settings
         customtkinter.CTkLabel(self.frame_left, text="Map Settings:", anchor="w", font=("Noto Sans", 18)).grid(pady=(20, 5))
@@ -106,6 +127,10 @@ class App(customtkinter.CTk):
         )
 
     def set_ports(self):
+        self.set_rotator()
+        self.set_telemetry()
+
+    def set_rotator(self):
         rotator_port = self.rotator_port_menu.get()
         if rotator_port != "Select…":
             rotator_port = rotator_port.split(maxsplit=1)[0]
@@ -115,6 +140,7 @@ class App(customtkinter.CTk):
             except: # noqa: E722
                 print("Rotator failed to initalize!")
 
+    def set_telemetry(self):
         if self.rfd_event is not None:
             self.rfd_event.set()
 
@@ -149,19 +175,19 @@ class App(customtkinter.CTk):
             lat_str = self.ground_settings.latitude.get()
             if lat_str is not None and lat_str != '':
                 self.ground_position.lat = float(lat_str)
-                self.GROUND_POS_TOML["latitude"] = float(lat_str)
+                self.ground_pos_toml["latitude"] = float(lat_str)
 
             lon_str = self.ground_settings.longitude.get()
             if lon_str is not None and lon_str != '':
                 self.ground_position.lon = float(lon_str)
-                self.GROUND_POS_TOML["longitude"] = float(lon_str)
+                self.ground_pos_toml["longitude"] = float(lon_str)
 
             alt_str = self.ground_settings.altitude.get()
             if alt_str is not None and alt_str != '':
                 self.ground_position.alt = float(alt_str)
-                self.GROUND_POS_TOML["altitude"] = float(alt_str)
+                self.ground_pos_toml["altitude"] = float(alt_str)
 
-            tomlkit.dump(self.GROUND_POS_TOML, open("ground_location.toml", "w", encoding="utf-8"))
+            tomlkit.dump(self.ground_pos_toml, open("ground_location.toml", "w", encoding="utf-8"))
         except ValueError as e:
             print(f"Invalid value! {e}")
 
@@ -186,12 +212,12 @@ class App(customtkinter.CTk):
         self.ground_position = GPSPoint(coords[0], coords[1], self.ground_position.alt)
 
         self.ground_settings.latitude.set(coords[0])
-        self.GROUND_POS_TOML["latitude"] = float(coords[0])
+        self.ground_pos_toml["latitude"] = float(coords[0])
         self.ground_settings.longitude.set(coords[1])
-        self.GROUND_POS_TOML["longitude"] = float(coords[1])
+        self.ground_pos_toml["longitude"] = float(coords[1])
         self.ground_settings.altitude.set(str(self.ground_position.alt))
 
-        tomlkit.dump(self.GROUND_POS_TOML, open("ground_location.toml", "w", encoding="utf-8"))
+        tomlkit.dump(self.ground_pos_toml, open("ground_location.toml", "w", encoding="utf-8"))
 
     def set_air_position(self):
 
@@ -230,12 +256,12 @@ class App(customtkinter.CTk):
             return
 
         # Straight line distance between the ground positions
-        # distance = self.ground_position.distance_to(self.air_position)
+        distance = self.ground_position.distance_to(self.air_position)
 
         # Altitude above ground station position
-        # altitude = self.ground_position.altitude_to(self.air_position)
-        # if altitude is None:
-        #    altitude = 0.0
+        altitude = self.ground_position.altitude_to(self.air_position)
+        if altitude is None:
+           altitude = 0.0
 
         horiz = self.ground_position.bearing_mag_corrected_to(self.air_position)
         vert = self.ground_position.elevation_to(self.air_position)
@@ -246,6 +272,8 @@ class App(customtkinter.CTk):
 
         self.telemetry.rot_az.configure(text=f"{horiz:.1f}°")
         self.telemetry.rot_alt.configure(text=f"{vert:.1f}°")
+        self.telemetry.dist.configure(text=f"{distance:.1f}")
+        self.telemetry.gr_alt.configure(text=f"{altitude:.1f}")
 
         self.after(500, self.set_air_position)
 
@@ -275,7 +303,7 @@ class App(customtkinter.CTk):
     def on_closing(self, signal=0, frame=None):
         print("Exiting!")
 
-        tomlkit.dump(self.GROUND_POS_TOML, open("ground_location.toml", "w", encoding="utf-8"))
+        tomlkit.dump(self.ground_pos_toml, open("ground_location.toml", "w", encoding="utf-8"))
 
         if self.rfd_event is not None:
             self.rfd_event.set()
@@ -292,31 +320,31 @@ class App(customtkinter.CTk):
 
         #
         if pathlib.Path("./ground_location.toml").is_file():
-            self.GROUND_POS_TOML = tomlkit.load(open("ground_location.toml", "r", encoding="utf-8"))
+            self.ground_pos_toml = tomlkit.load(open("ground_location.toml", "r", encoding="utf-8"))
         else:
-            self.GROUND_POS_TOML = tomlkit.TOMLDocument()
-            self.GROUND_POS_TOML.add("latitude", 0)
-            self.GROUND_POS_TOML.add("longitude", 0)
-            self.GROUND_POS_TOML.add("altitude", 0)
-            print(self.GROUND_POS_TOML)
-            tomlkit.dump(self.GROUND_POS_TOML, open("ground_location.toml", "w+", encoding="utf-8"))
+            self.ground_pos_toml = tomlkit.TOMLDocument()
+            self.ground_pos_toml.add("latitude", 0)
+            self.ground_pos_toml.add("longitude", 0)
+            self.ground_pos_toml.add("altitude", 0)
+            print(self.ground_pos_toml)
+            tomlkit.dump(self.ground_pos_toml, open("ground_location.toml", "w+", encoding="utf-8"))
 
-        self.DEFAULT_LAT = float(self.GROUND_POS_TOML.item("latitude"))
-        self.DEFAULT_LON = float(self.GROUND_POS_TOML.item("longitude"))
-        self.DEFAULT_ALT = float(self.GROUND_POS_TOML.item("altitude"))
+        default_lat = float(self.ground_pos_toml.item("latitude"))
+        default_lon = float(self.ground_pos_toml.item("longitude"))
+        default_alt = float(self.ground_pos_toml.item("altitude"))
 
         # Set default value
-        self.map_widget.set_position(self.DEFAULT_LAT, self.DEFAULT_LON)
+        self.map_widget.set_position(default_lat, default_lon)
         self.map_widget.set_zoom(16)
         self.map_option_menu.set("Google hybrid")
         self.map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}&s=Ga", max_zoom=22)
 
         # The ground station position
         self.ground_marker = None
-        self.ground_position = GPSPoint(self.DEFAULT_LAT, self.DEFAULT_LON, self.DEFAULT_ALT)
-        self.ground_settings.latitude.set(str(self.DEFAULT_LAT))
-        self.ground_settings.longitude.set(str(self.DEFAULT_LON))
-        self.ground_settings.altitude.set(str(self.DEFAULT_ALT))
+        self.ground_position = GPSPoint(default_lat, default_lon, default_alt)
+        self.ground_settings.latitude.set(str(default_lat))
+        self.ground_settings.longitude.set(str(default_lon))
+        self.ground_settings.altitude.set(str(default_alt))
         self.set_ground_parameters()
 
         # Rocket position
@@ -326,27 +354,6 @@ class App(customtkinter.CTk):
         self.after(500, self.set_air_position)
 
         self.mainloop()
-
-class RotatorCommandWindow(customtkinter.CTkToplevel, Rotator):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.rotator = Rotator
-        self.title("Rotator Commands")
-        self.geometry(str(App.WIDTH) + "x" + str(App.HEIGHT))
-
-        self.calbutton = customtkinter.CTkButton(self, text="Calibrate Vertical", command=self.calibrate)
-        self.calbutton.grid(pady=10)
-
-        # self.movv = customtkinter.CTKButton(self, text="Move Vertical", command=self.movv)
-
-    def calibrate(self, Rotator):
-        if Rotator is not None:
-            Rotator.calibrate_vertical(self.rotator)
-
-    def movv(self, Rotator):
-        if Rotator is not None:
-            Rotator.move(Rotator, "UP")
 
 
 class Telemetry(customtkinter.CTkFrame):
@@ -386,8 +393,16 @@ class Telemetry(customtkinter.CTkFrame):
         self.rot_az = customtkinter.CTkLabel(self, width=50, text="...", anchor="w")
         self.rot_az.grid(row=6, column=3)
 
+        customtkinter.CTkLabel(self, text="Distance:").grid(row=7, column=0, padx=10)
+        self.dist = customtkinter.CTkLabel(self, width=50, text="...", anchor="w")
+        self.dist.grid(row=7, column=1)
+
+        customtkinter.CTkLabel(self, text="Ground Alt:").grid(row=7, column=2, padx=10)
+        self.gr_alt = customtkinter.CTkLabel(self, width=50, text="...", anchor="w")
+        self.gr_alt.grid(row=7, column=3)
+
         sep = tk.Frame(self, bg="#474747", height=1, bd=0)
-        sep.grid(row=7, columnspan=4, sticky="ew")
+        sep.grid(row=8, columnspan=4, sticky="ew")
 
 
 class GroundSettings(customtkinter.CTkFrame):
