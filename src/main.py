@@ -16,7 +16,7 @@ from threading import Event, Thread
 import json
 import signal
 import tkinter as tk
-
+import datetime
 
 ## LOCAL IMPORTS ##
 from rotator import Rotator
@@ -517,11 +517,15 @@ def gps_loop(gps_port: str, event: Event):
             ROCKET_PACKET_CONT = decoded_data
             print(decoded_data)
             try:
+                timestamp = datetime.datetime.now().isoformat()
+
                 with open("packet_log.txt", "a") as packetlog:
+                    packetlog.write(timestamp)
+                    packetlog.write(",")
                     packetlog.write(received_json)
                     packetlog.write("\n")
-            except:
-                print("saving txt failed")
+            except Exception as e:
+                print(f"Saving to txt failed: {e}")
         except Exception as e:
             print(f"Failed to decode json: {e}")
 
