@@ -41,16 +41,16 @@ class RotatorCommandWindow(customtkinter.CTkToplevel):
         self.f_ctrl.grid_rowconfigure(0, weight=1)
         self.f_ctrl.grid_rowconfigure(4, weight=1)
 
-        self.up_button = customtkinter.CTkButton(self.f_ctrl, text="UP", width=50, command=lambda : self.movc([mvc.UP]))
+        self.up_button = customtkinter.CTkButton(self.f_ctrl, text="UP", width=50, height=50, command=lambda : self.movc([mvc.UP]))
         self.up_button.grid(column=1, row=1, padx=5, pady=5, sticky="ew")
-        self.left_button = customtkinter.CTkButton(self.f_ctrl, text="LEFT", width=50, command=lambda : self.movc([mvc.LEFT]))
+        self.left_button = customtkinter.CTkButton(self.f_ctrl, text="LEFT", width=50, height=50, command=lambda : self.movc([mvc.LEFT]))
         self.left_button.grid(column=0, row=2, padx=10, pady=5, sticky="ew")
-        self.right_button = customtkinter.CTkButton(self.f_ctrl, text="RIGHT", width=50, command=lambda : self.movc([mvc.RIGHT]))
+        self.right_button = customtkinter.CTkButton(self.f_ctrl, text="RIGHT", width=50, height=50, command=lambda : self.movc([mvc.RIGHT]))
         self.right_button.grid(column=2, row=2, padx=10, pady=5, sticky="ew")
-        self.down_button = customtkinter.CTkButton(self.f_ctrl, text="DOWN", width=50, command=lambda : self.movc([mvc.DOWN]))
+        self.down_button = customtkinter.CTkButton(self.f_ctrl, text="DOWN", width=50, height=50, command=lambda : self.movc([mvc.DOWN]))
         self.down_button.grid(column=1, row=3, padx=5, pady=5, sticky="ew")
 
-        self.down_button = customtkinter.CTkButton(self.f_ctrl, text="STOP", width=50, command=lambda : self.movc([mvc.STOP_VERTICAL, mvc.STOP_HORIZONTAL]))
+        self.down_button = customtkinter.CTkButton(self.f_ctrl, text="STOP", width=50, height=50, command=lambda : self.movc([mvc.STOP_VERTICAL, mvc.STOP_HORIZONTAL]))
         self.down_button.grid(column=1, row=2, padx=5, pady=5, sticky="ew")
 
     def calibrate_vertical(self, Set: Optional[bool] = False):

@@ -323,15 +323,15 @@ class App(customtkinter.CTk):
             self.ground_pos_toml = tomlkit.load(open("ground_location.toml", "r", encoding="utf-8"))
         else:
             self.ground_pos_toml = tomlkit.TOMLDocument()
-            self.ground_pos_toml.add("latitude", 0)
-            self.ground_pos_toml.add("longitude", 0)
-            self.ground_pos_toml.add("altitude", 0)
+            self.ground_pos_toml.add("latitude", 0) # type: ignore
+            self.ground_pos_toml.add("longitude", 0) # type: ignore
+            self.ground_pos_toml.add("altitude", 0) # type: ignore
             print(self.ground_pos_toml)
             tomlkit.dump(self.ground_pos_toml, open("ground_location.toml", "w+", encoding="utf-8"))
 
-        default_lat = float(self.ground_pos_toml.item("latitude"))
-        default_lon = float(self.ground_pos_toml.item("longitude"))
-        default_alt = float(self.ground_pos_toml.item("altitude"))
+        default_lat = float(self.ground_pos_toml.item("latitude")) # type: ignore
+        default_lon = float(self.ground_pos_toml.item("longitude")) # type: ignore
+        default_alt = float(self.ground_pos_toml.item("altitude")) # type: ignore
 
         # Set default value
         self.map_widget.set_position(default_lat, default_lon)
