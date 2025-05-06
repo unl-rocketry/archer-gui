@@ -28,8 +28,8 @@ from utils import GPSPoint, crc8
 ROCKET_PACKET_CONT = None
 """Global variable storing rocket packet data"""
 
-class App(customtkinter.CTk):
 
+class App(customtkinter.CTk):
     APP_NAME = "ARCHER/AROWSS - UNL Aerospace"
     WIDTH = 1024
     HEIGHT = 768
@@ -49,7 +49,9 @@ class App(customtkinter.CTk):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        self.frame_left = customtkinter.CTkFrame(master=self, width=400, corner_radius=0, fg_color=None)
+        self.frame_left = customtkinter.CTkFrame(
+            master=self, width=400, corner_radius=0, fg_color=None
+        )
         self.frame_left.grid(row=0, column=0, padx=0, pady=0, sticky="nsew")
         self.frame_left.grid_propagate(False)
 
@@ -65,46 +67,60 @@ class App(customtkinter.CTk):
         self.telemetry.grid(pady=20)
 
         # Ground position settings
-        self.ground_settings = GroundSettings(self.frame_left, command=self.set_ground_parameters)
+        self.ground_settings = GroundSettings(
+            self.frame_left, command=self.set_ground_parameters
+        )
         self.ground_settings.grid()
 
-        customtkinter.CTkLabel(self.frame_left, text="Port Settings:", anchor="w", font=("Noto Sans", 18)).grid(pady=(20, 5))
+        customtkinter.CTkLabel(
+            self.frame_left, text="Port Settings:", anchor="w", font=("Noto Sans", 18)
+        ).grid(pady=(20, 5))
 
-        self.rotator_port_menu = LabeledSelectMenu(self.frame_left, label_text="Rotator Port")
+        self.rotator_port_menu = LabeledSelectMenu(
+            self.frame_left, label_text="Rotator Port"
+        )
         self.rotator_port_menu.grid(pady=(0, 10))
         self.rfd_port_menu = LabeledSelectMenu(self.frame_left, label_text="RFD Port")
         self.rfd_port_menu.grid(pady=(0, 10))
-        customtkinter.CTkButton(self.frame_left, text="Rescan Ports", command=self.rescan_ports).grid()
+        customtkinter.CTkButton(
+            self.frame_left, text="Rescan Ports", command=self.rescan_ports
+        ).grid()
 
-        self.set_buttons_frame = customtkinter.CTkFrame(self.frame_left, corner_radius=0, fg_color="transparent")
+        self.set_buttons_frame = customtkinter.CTkFrame(
+            self.frame_left, corner_radius=0, fg_color="transparent"
+        )
         self.set_buttons_frame.grid()
         customtkinter.CTkButton(
-            self.set_buttons_frame,
-            text="Set RFD",
-            width=50,
-            command=self.set_telemetry
+            self.set_buttons_frame, text="Set RFD", width=50, command=self.set_telemetry
         ).grid(pady=10, padx=5, column=0, row=0)
         customtkinter.CTkButton(
             self.set_buttons_frame,
             text="Set Rotator",
             width=50,
-            command=self.set_rotator
-        ).grid(pady=10,  padx=5, column=1, row=0)
+            command=self.set_rotator,
+        ).grid(pady=10, padx=5, column=1, row=0)
 
         self.rotator_command_window_button = customtkinter.CTkButton(
             self.frame_left,
             text="Rotator Commands",
-            command=lambda : RotatorCommandWindow(self.rotator)
+            command=lambda: RotatorCommandWindow(self.rotator),
         )
         self.rotator_command_window_button.grid(pady=10)
 
         # Map style settings
-        customtkinter.CTkLabel(self.frame_left, text="Map Settings:", anchor="w", font=("Noto Sans", 18)).grid(pady=(20, 5))
+        customtkinter.CTkLabel(
+            self.frame_left, text="Map Settings:", anchor="w", font=("Noto Sans", 18)
+        ).grid(pady=(20, 5))
         self.map_option_menu = LabeledSelectMenu(
             self.frame_left,
             label_text="Map Style",
-            values=["Google hybrid", "Google normal", "Google satellite", "OpenStreetMap"],
-            command=self.change_map
+            values=[
+                "Google hybrid",
+                "Google normal",
+                "Google satellite",
+                "OpenStreetMap",
+            ],
+            command=self.change_map,
         )
         self.map_option_menu.grid(padx=(20, 20), pady=(0, 20))
 
@@ -117,13 +133,21 @@ class App(customtkinter.CTk):
         self.frame_right.grid_columnconfigure(2, weight=1)
 
         self.map_widget = TkinterMapView(self.frame_right, corner_radius=0)
-        self.map_widget.grid(row=1, rowspan=1, column=0, columnspan=3, sticky="nswe", padx=(0, 0), pady=(0, 0))
+        self.map_widget.grid(
+            row=1,
+            rowspan=1,
+            column=0,
+            columnspan=3,
+            sticky="nswe",
+            padx=(0, 0),
+            pady=(0, 0),
+        )
 
         # Right click event handling
         self.map_widget.add_right_click_menu_command(
             label="Set Ground Position",
             command=self.right_click_ground_position,
-            pass_coords=True
+            pass_coords=True,
         )
 
     def set_ports(self):
@@ -137,7 +161,7 @@ class App(customtkinter.CTk):
             try:
                 self.rotator = Rotator(rotator_port)
                 print(f"Rotator protocol v{self.rotator.protocol_version}")
-            except: # noqa: E722
+            except:  # noqa: E722
                 print("Rotator failed to initalize!")
 
     def set_telemetry(self):
@@ -148,18 +172,21 @@ class App(customtkinter.CTk):
         if rfd_port != "Select…":
             rfd_port = rfd_port.split(maxsplit=1)[0]
             self.rfd_event = Event()
-            t = Thread(target=gps_loop, args=[rfd_port, self.rfd_event], name="gps_thread")
+            t = Thread(
+                target=gps_loop, args=[rfd_port, self.rfd_event], name="gps_thread"
+            )
             t.start()
             print("RFD Setup")
 
     def rescan_ports(self):
-        """ Rescan and update the serial ports """
+        """Rescan and update the serial ports"""
         self.rotator_port_menu.option_menu.configure(state="disabled")
         self.rfd_port_menu.option_menu.configure(state="disabled")
 
         self.port_list = list(
-            filter(lambda p : "/dev/ttyS" not in p, map(
-                lambda p : str(p), serial.tools.list_ports.comports())
+            filter(
+                lambda p: "/dev/ttyS" not in p,
+                map(lambda p: str(p), serial.tools.list_ports.comports()),
             )
         )
         self.port_list.insert(0, "Select…")
@@ -173,34 +200,34 @@ class App(customtkinter.CTk):
     def set_ground_parameters(self):
         try:
             lat_str = self.ground_settings.latitude.get()
-            if lat_str is not None and lat_str != '':
+            if lat_str is not None and lat_str != "":
                 self.ground_position.lat = float(lat_str)
                 self.ground_pos_toml["latitude"] = float(lat_str)
 
             lon_str = self.ground_settings.longitude.get()
-            if lon_str is not None and lon_str != '':
+            if lon_str is not None and lon_str != "":
                 self.ground_position.lon = float(lon_str)
                 self.ground_pos_toml["longitude"] = float(lon_str)
 
             alt_str = self.ground_settings.altitude.get()
-            if alt_str is not None and alt_str != '':
+            if alt_str is not None and alt_str != "":
                 self.ground_position.alt = float(alt_str)
                 self.ground_pos_toml["altitude"] = float(alt_str)
 
-            tomlkit.dump(self.ground_pos_toml, open("ground_location.toml", "w", encoding="utf-8"))
+            tomlkit.dump(
+                self.ground_pos_toml,
+                open("ground_location.toml", "w", encoding="utf-8"),
+            )
         except ValueError as e:
             print(f"Invalid value! {e}")
 
-
         if self.ground_marker is not None:
             self.ground_marker.set_position(
-                self.ground_position.lat,
-                self.ground_position.lon
+                self.ground_position.lat, self.ground_position.lon
             )
         else:
             self.ground_marker = self.map_widget.set_marker(
-                self.ground_position.lat,
-                self.ground_position.lon
+                self.ground_position.lat, self.ground_position.lon
             )
 
     def right_click_ground_position(self, coords):
@@ -217,11 +244,12 @@ class App(customtkinter.CTk):
         self.ground_pos_toml["longitude"] = float(coords[1])
         self.ground_settings.altitude.set(str(self.ground_position.alt))
 
-        tomlkit.dump(self.ground_pos_toml, open("ground_location.toml", "w", encoding="utf-8"))
+        tomlkit.dump(
+            self.ground_pos_toml, open("ground_location.toml", "w", encoding="utf-8")
+        )
 
     def set_air_position(self):
-
-        #print("function ran yay")
+        # print("function ran yay")
         if ROCKET_PACKET_CONT is None or "gps" not in ROCKET_PACKET_CONT:
             self.after(500, self.set_air_position)
             return
@@ -261,7 +289,7 @@ class App(customtkinter.CTk):
         # Altitude above ground station position
         altitude = self.ground_position.altitude_to(self.air_position)
         if altitude is None:
-           altitude = 0.0
+            altitude = 0.0
 
         horiz = self.ground_position.bearing_mag_corrected_to(self.air_position)
         vert = self.ground_position.elevation_to(self.air_position)
@@ -282,28 +310,29 @@ class App(customtkinter.CTk):
             case "Google hybrid":
                 self.map_widget.set_tile_server(
                     "https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}&s=Ga",
-                    max_zoom=22
+                    max_zoom=22,
                 )
             case "Google normal":
                 self.map_widget.set_tile_server(
                     "https://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}&s=Ga",
-                    max_zoom=22
+                    max_zoom=22,
                 )
             case "Google satellite":
                 self.map_widget.set_tile_server(
                     "https://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}&s=Ga",
-                    max_zoom=22
+                    max_zoom=22,
                 )
             case "OpenStreetMap":
                 self.map_widget.set_tile_server(
-                    "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                    max_zoom=22
+                    "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png", max_zoom=22
                 )
 
     def on_closing(self, signal=0, frame=None):
         print("Exiting!")
 
-        tomlkit.dump(self.ground_pos_toml, open("ground_location.toml", "w", encoding="utf-8"))
+        tomlkit.dump(
+            self.ground_pos_toml, open("ground_location.toml", "w", encoding="utf-8")
+        )
 
         if self.rfd_event is not None:
             self.rfd_event.set()
@@ -320,24 +349,31 @@ class App(customtkinter.CTk):
 
         #
         if pathlib.Path("./ground_location.toml").is_file():
-            self.ground_pos_toml = tomlkit.load(open("ground_location.toml", "r", encoding="utf-8"))
+            self.ground_pos_toml = tomlkit.load(
+                open("ground_location.toml", "r", encoding="utf-8")
+            )
         else:
             self.ground_pos_toml = tomlkit.TOMLDocument()
-            self.ground_pos_toml.add("latitude", 0) # type: ignore
-            self.ground_pos_toml.add("longitude", 0) # type: ignore
-            self.ground_pos_toml.add("altitude", 0) # type: ignore
+            self.ground_pos_toml.add("latitude", 0)  # type: ignore
+            self.ground_pos_toml.add("longitude", 0)  # type: ignore
+            self.ground_pos_toml.add("altitude", 0)  # type: ignore
             print(self.ground_pos_toml)
-            tomlkit.dump(self.ground_pos_toml, open("ground_location.toml", "w+", encoding="utf-8"))
+            tomlkit.dump(
+                self.ground_pos_toml,
+                open("ground_location.toml", "w+", encoding="utf-8"),
+            )
 
-        default_lat = float(self.ground_pos_toml.item("latitude")) # type: ignore
-        default_lon = float(self.ground_pos_toml.item("longitude")) # type: ignore
-        default_alt = float(self.ground_pos_toml.item("altitude")) # type: ignore
+        default_lat = float(self.ground_pos_toml.item("latitude"))  # type: ignore
+        default_lon = float(self.ground_pos_toml.item("longitude"))  # type: ignore
+        default_alt = float(self.ground_pos_toml.item("altitude"))  # type: ignore
 
         # Set default value
         self.map_widget.set_position(default_lat, default_lon)
         self.map_widget.set_zoom(16)
         self.map_option_menu.set("Google hybrid")
-        self.map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}&s=Ga", max_zoom=22)
+        self.map_widget.set_tile_server(
+            "https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}&s=Ga", max_zoom=22
+        )
 
         # The ground station position
         self.ground_marker = None
@@ -361,10 +397,7 @@ class Telemetry(customtkinter.CTkFrame):
         super().__init__(master, fg_color="transparent", border_width=0, **kwargs)
 
         customtkinter.CTkLabel(
-            self,
-            text="Telemetry:",
-            anchor="w",
-            font=("Noto Sans", 18)
+            self, text="Telemetry:", anchor="w", font=("Noto Sans", 18)
         ).grid(columnspan=4, pady=(0, 5))
 
         sep = tk.Frame(self, bg="#474747", height=1, bd=0)
@@ -410,10 +443,7 @@ class GroundSettings(customtkinter.CTkFrame):
         super().__init__(master, fg_color="transparent", border_width=0, **kwargs)
 
         customtkinter.CTkLabel(
-            self,
-            text="Ground Settings:",
-            anchor="w",
-            font=("Noto Sans", 18)
+            self, text="Ground Settings:", anchor="w", font=("Noto Sans", 18)
         ).grid(pady=(0, 5))
 
         self.latitude = LabeledTextEntry(self, label_text="Latitude")
@@ -425,18 +455,21 @@ class GroundSettings(customtkinter.CTkFrame):
         self.altitude = LabeledTextEntry(self, label_text="Altitude")
         self.altitude.grid(pady=2.5, padx=5, sticky="w")
 
-        self.button = customtkinter.CTkButton(self, text="Set Ground Settings", command=command)
+        self.button = customtkinter.CTkButton(
+            self, text="Set Ground Settings", command=command
+        )
         self.button.grid(pady=(5, 0))
 
 
 class LabeledSelectMenu(customtkinter.CTkFrame):
     def __init__(
-            self,
-            master,
-            label_text: str = "",
-            values: Optional[list] | None = None,
-            command: Union[Callable[[str], Any], None] = None,
-            **kwargs):
+        self,
+        master,
+        label_text: str = "",
+        values: Optional[list] | None = None,
+        command: Union[Callable[[str], Any], None] = None,
+        **kwargs,
+    ):
         super().__init__(master, **kwargs)
 
         self.label = customtkinter.CTkLabel(self, text=label_text, anchor="w")
@@ -463,7 +496,7 @@ class LabeledSelectMenu(customtkinter.CTkFrame):
 
 
 class LabeledTextEntry(customtkinter.CTkFrame):
-    """ A text entry widget with a label """
+    """A text entry widget with a label"""
 
     def __init__(self, master, label_text="", placeholder_text="", **kwargs):
         super().__init__(master, **kwargs)
@@ -478,7 +511,7 @@ class LabeledTextEntry(customtkinter.CTkFrame):
         return self.entry.get()
 
     def set(self, string: str):
-        self.entry.delete(0, 'end')
+        self.entry.delete(0, "end")
         self.entry.insert(0, string)
 
 
@@ -508,7 +541,6 @@ def gps_loop(gps_port: str, event: Event):
         except Exception as e:
             print(f"Splitting failed: {e}")
             continue
-
 
         # Calculate CRC from the data
         calculated_crc = None
@@ -546,7 +578,6 @@ def gps_loop(gps_port: str, event: Event):
 
     # Close the serial port
     gps_serial.close()
-
 
 
 if __name__ == "__main__":

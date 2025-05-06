@@ -7,29 +7,40 @@ import datetime
 
 EARTH_RADIUS_METERS = 6_378_137
 
-class GPSPoint():
-    """ A single point on the Earth, including altitude. """
 
-    def __init__(self, latitude: float = 0.0, longitude: float = 0.0, altitude: Optional[float] = None):
+class GPSPoint:
+    """A single point on the Earth, including altitude."""
+
+    def __init__(
+        self,
+        latitude: float = 0.0,
+        longitude: float = 0.0,
+        altitude: Optional[float] = None,
+    ):
         self.lat = latitude
         self.lon = longitude
         self.alt = altitude
 
     def lat_rad(self) -> float:
-        """ Returns the latitude component in radians. """
+        """Returns the latitude component in radians."""
         return math.radians(self.lat)
 
     def lon_rad(self) -> float:
-        """ Returns the longitude component in radians. """
+        """Returns the longitude component in radians."""
         return math.radians(self.lon)
 
     def distance_to(self, other: Self) -> float:
-        """ Great-circle ground-only distance in meters between two GPS Points. """
+        """Great-circle ground-only distance in meters between two GPS Points."""
 
         delta_lat_rad = other.lat_rad() - self.lat_rad()
         delta_lon_rad = other.lon_rad() - self.lon_rad()
 
-        a = math.sin(delta_lat_rad / 2)**2 + math.cos(self.lat_rad()) * math.cos(other.lat_rad()) * math.sin(delta_lon_rad / 2)**2
+        a = (
+            math.sin(delta_lat_rad / 2) ** 2
+            + math.cos(self.lat_rad())
+            * math.cos(other.lat_rad())
+            * math.sin(delta_lon_rad / 2) ** 2
+        )
 
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
@@ -42,13 +53,15 @@ class GPSPoint():
             return None
 
     def bearing_to(self, other: Self, positive: bool = False) -> float:
-        """ Find the absolute bearing (azimuth) to another point. """
+        """Find the absolute bearing (azimuth) to another point."""
 
         # Calculate the bearing
         bearing = math.atan2(
             math.sin(other.lon_rad() - self.lon_rad()) * math.cos(other.lat_rad()),
-            math.cos(self.lat_rad()) * math.sin(other.lat_rad()) - math.sin(self.lat_rad())
-            * math.cos(other.lat_rad()) * math.cos(other.lon_rad() - self.lon_rad())
+            math.cos(self.lat_rad()) * math.sin(other.lat_rad())
+            - math.sin(self.lat_rad())
+            * math.cos(other.lat_rad())
+            * math.cos(other.lon_rad() - self.lon_rad()),
         )
 
         # Convert the bearing to degrees
@@ -61,15 +74,24 @@ class GPSPoint():
         return bearing
 
     def bearing_mag_corrected_to(self, other: Self, positive: bool = False) -> float:
-        """ Find the absolute bearing (azimuth) to another point, to be used with a device basing its heading on magnetic north """
+        """Find the absolute bearing (azimuth) to another point, to be used with a device basing its heading on magnetic north"""
 
         bearing = self.bearing_to(other, False)
 
         current_datetime = datetime.datetime.now()
-        fractional_year = (float((current_datetime.date() - datetime.date(current_datetime.year, 1, 1)).days) / 365.2425) + current_datetime.year
+        fractional_year = (
+            float(
+                (
+                    current_datetime.date() - datetime.date(current_datetime.year, 1, 1)
+                ).days
+            )
+            / 365.2425
+        ) + current_datetime.year
 
         geo_mag = GeoMag(base_year=datetime.datetime.now(), high_resolution=True)
-        result = geo_mag.calculate(glat=self.lat, glon=self.lon, alt=self.alt or 0.0, time=fractional_year)
+        result = geo_mag.calculate(
+            glat=self.lat, glon=self.lon, alt=self.alt or 0.0, time=fractional_year
+        )
 
         bearing = bearing + result.d
 
@@ -79,7 +101,7 @@ class GPSPoint():
         return bearing
 
     def elevation_to(self, other: Self) -> float:
-        """ Find the elevation above the horizon (altitude) to another point. """
+        """Find the elevation above the horizon (altitude) to another point."""
 
         # Distance in meters, and horizontal angle (azimuth)
         horizontal_distance = self.distance_to(other)
@@ -99,8 +121,9 @@ class GPSPoint():
 
         return vertical_angle
 
+
 def m_to_ft(meters: float) -> float:
-    """ Helper function to convert meters to feet, mainly for display """
+    """Helper function to convert meters to feet, mainly for display"""
     return meters / 0.3048
 
 
@@ -112,7 +135,7 @@ def crc8(data: bytes) -> int:
         crc ^= element
         for _ in range(8):
             if crc & 0x80 > 0:
-                crc = (crc << 1) ^ 0xd5
+                crc = (crc << 1) ^ 0xD5
             else:
                 crc <<= 1
 
