@@ -324,7 +324,7 @@ class App(customtkinter.CTk):
                 )
             case "OpenStreetMap":
                 self.map_widget.set_tile_server(
-                    "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png", max_zoom=22
+                    "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png", max_zoom=19
                 )
 
     def on_closing(self, signal=0, frame=None):
