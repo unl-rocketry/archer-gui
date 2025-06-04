@@ -7,6 +7,7 @@
 # https://www.movable-type.co.uk/scripts/latlong.html
 
 import pathlib
+import socket
 from typing import Any, Callable, Optional, Union
 import customtkinter
 import tomlkit
@@ -259,9 +260,9 @@ class App(customtkinter.CTk):
             return
 
         try:
-            gps_lat = ROCKET_PACKET_CONT["gps"]["latitude"]
-            gps_lon = ROCKET_PACKET_CONT["gps"]["longitude"]
-            gps_alt = ROCKET_PACKET_CONT["gps"]["altitude"]
+            gps_lat = ROCKET_PACKET_CONT["gps"]["lat"]
+            gps_lon = ROCKET_PACKET_CONT["gps"]["lon"]
+            gps_alt = ROCKET_PACKET_CONT["gps"]["alt"]
         except Exception as e:
             print(f"Not all fields available: {e}")
             self.after(500, self.set_air_position)
@@ -516,28 +517,34 @@ class LabeledTextEntry(customtkinter.CTkFrame):
 
 
 def gps_loop(gps_port: str, event: Event):
-    try:
-        gps_serial = serial.Serial(gps_port, 57600, timeout=1)
-    except IOError as e:
-        print(f"Failed to start GPS loop: {e}")
-        return
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind(("0.0.0.0", 3180))
 
     print("Started GPS loop")
 
     # Ignoring the errors in this is OK because it must not crash!
+    buffer = bytearray()
     while not event.is_set():
         try:
-            new_data = gps_serial.readline().decode("utf-8").strip()
+            data, addr = sock.recvfrom(1024)
+            buffer.extend(data)
         except Exception as e:
             print(f"Failed to read telemetry: {e}")
             continue
 
-        if len(new_data) == 0:
+        if len(buffer) == 0:
             continue
 
+        if b'\n' not in buffer:
+            continue
+
+        # Decode the received data, where the first byte is the CRC, the second
+        # byte is a space, and all subsequent bytes are UTF-8 encoded JSON data
         try:
-            received_crc, received_json = new_data.split(maxsplit=1)
-            received_crc = int(received_crc)
+            received_crc = buffer[0]
+            sequence_num = buffer[1]
+            raw_received_json = buffer[2:-1]
+            buffer.clear()
         except Exception as e:
             print(f"Splitting failed: {e}")
             continue
@@ -545,7 +552,7 @@ def gps_loop(gps_port: str, event: Event):
         # Calculate CRC from the data
         calculated_crc = None
         try:
-            calculated_crc = crc8(received_json.encode("utf-8"))
+            calculated_crc = crc8(raw_received_json)
         except Exception as e:
             print(f"Could not calculate new CRC: {e}")
             continue
@@ -559,6 +566,7 @@ def gps_loop(gps_port: str, event: Event):
 
         # Load the data as JSON and add it to the packet
         try:
+            received_json = raw_received_json.decode("utf-8")
             decoded_data = json.loads(received_json)
             global ROCKET_PACKET_CONT
             ROCKET_PACKET_CONT = decoded_data
