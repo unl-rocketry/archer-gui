@@ -6,8 +6,12 @@
 # Lots of useful formulas for things used here:
 # https://www.movable-type.co.uk/scripts/latlong.html
 
+from enum import StrEnum
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import pathlib
+import re
 from typing import Any, Callable, Optional, Union
+from urllib.parse import urlparse
 import customtkinter
 import tomlkit
 from tkintermapview import TkinterMapView
@@ -579,9 +583,154 @@ def gps_loop(gps_port: str, event: Event):
     # Close the serial port
     gps_serial.close()
 
+HOST: str = "0.0.0.0"
+PORT: int = 8000
+
+class ApiServerEndpoints(StrEnum):
+    Coords = "coords"
+    FullPacket = "fullpacket"
+    GroundInfo = "groundinfo"
+    ExtraData = "extra"
+
+class HTTPRequestHandler(BaseHTTPRequestHandler):
+    # def do_POST(self):
+    #     if re.search('/api/post/*', self.path):
+    #         length = int(self.headers.get('content-length'))
+    #         data = self.rfile.read(length).decode('utf8')
+
+    #         record_id = self.path.split('/')[-1]
+    #         LocalData.records[record_id] = data
+
+    #         logging.info("add record %s: %s", record_id, data)
+    #         self.send_response(200)
+    #     else:
+    #         self.send_response(403)
+    #     self.end_headers()
+
+    def do_GET(self):
+        global ROCKET_PACKET_CONT
+
+        parsed_url = urlparse(self.path)
+
+        if re.search('/api/*', parsed_url.path):
+            endpoint = self.path.split('/')[-1]
+                
+            match endpoint:
+                case ApiServerEndpoints.Coords:
+                    try:
+                        gps_lat = ROCKET_PACKET_CONT["gps"]["latitude"]
+                        gps_lon = ROCKET_PACKET_CONT["gps"]["longitude"]
+                        gps_alt = ROCKET_PACKET_CONT["gps"]["altitude"]
+                    except Exception as e:
+                        self.send_response(404, f"No packet data; {e}")
+                        self.end_headers()
+                        return
+
+                    gps_point = GPSPoint(gps_lat, gps_lon, gps_alt)
+                    output = json.dumps(gps_point.__dict__).encode("utf-8")
+                    self.__respond(200, "application/json", output)
+                case ApiServerEndpoints.FullPacket:
+                    output = json.dumps(ROCKET_PACKET_CONT).encode("utf-8")
+                    self.__respond(200, "application/json", output)
+                case ApiServerEndpoints.GroundInfo:
+                    try:
+                        ground_point = get_ground_point()
+                    except Exception as e:
+                        self.send_response(404, f"No ground data; {e}")
+                        self.end_headers()
+                        return
+
+                    output = json.dumps(ground_point.__dict__).encode("utf-8")
+                    self.__respond(200, "application/json", output)
+                case ApiServerEndpoints.ExtraData:
+                    try:
+                        gps_lat = ROCKET_PACKET_CONT["gps"]["latitude"]
+                        gps_lon = ROCKET_PACKET_CONT["gps"]["longitude"]
+                        gps_alt = ROCKET_PACKET_CONT["gps"]["altitude"]
+                    except Exception as e:
+                        self.send_response(404, f"No packet data; {e}")
+                        self.end_headers()
+                        return
+                    
+                    try:
+                        ground_point = get_ground_point()
+                    except Exception as e:
+                        self.send_response(404, f"No ground data; {e}")
+                        self.end_headers()
+                        return
+
+                    self.air_position = GPSPoint(gps_lat, gps_lon, gps_alt)
+
+                    # Straight line distance between the ground positions
+                    distance = ground_point.distance_to(self.air_position)
+
+                    # Altitude above ground station position
+                    altitude = ground_point.altitude_to(self.air_position)
+                    if altitude is None:
+                        altitude = 0.0
+
+                    horiz = ground_point.bearing_mag_corrected_to(self.air_position)
+                    vert = ground_point.elevation_to(self.air_position)
+
+                    output = json.dumps({
+                        "angles": {
+                            "horizontal": horiz,
+                            "vertical": vert,
+                        },
+                        "ground_altitude": altitude,
+                        "distance": distance,
+                    }).encode("utf-8")
+                    self.__respond(200, "application/json", output)
+                case _:
+                    self.send_response(404, "Not Found: the endpoint is invalid")
+        else:
+            self.send_response(403)
+        self.end_headers()
+
+    def __respond(self, status: int, type: str, data: bytes):
+        """Send an HTTP response to a client"""
+        # data = json.dumps(LocalData.records[record_id]).encode('utf-8')
+        # self.__respond(200, 'application/json', data)
+
+        self.send_response(status)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Content-Type', type)
+        self.end_headers()
+
+        # Respond with data
+        self.wfile.write(data)
+
+def get_ground_point():
+    ground_pos_toml = tomlkit.load(
+        open("ground_location.toml", "r", encoding="utf-8")
+    )
+    
+    ground_point = GPSPoint(
+        ground_pos_toml["latitude"], 
+        ground_pos_toml["longitude"],
+        ground_pos_toml["altitude"]
+    )
+
+    return ground_point
+
+def run_server():
+    print(f"Server starting on http://{HOST}:{PORT}")
+
+    server = ThreadingHTTPServer((HOST, PORT), HTTPRequestHandler)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    server.server_close()
+
 
 if __name__ == "__main__":
     app = App()
+
+    t = Thread(
+        target=run_server, args=[], name="server_thread"
+    )
+    t.start()
 
     # Catch Ctl + C
     signal.signal(signal.SIGINT, app.on_closing)
