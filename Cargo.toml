@@ -1,0 +1,13 @@
+[package]
+name = "archer-gui"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+eframe = { version = "0.34", features = ["persistence"] }
+egui = "0.34"
+egui-wgpu = "0.34.1"
+galileo = { git = "https://github.com/galileo-map/galileo.git" }
+galileo-egui = { git = "https://github.com/galileo-map/galileo.git" }
+galileo-types = { git = "https://github.com/galileo-map/galileo.git" }
+serde = { version = "1.0.228", features = ["derive"] }
