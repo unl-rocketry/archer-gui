@@ -1,3 +1,7 @@
+#![feature(nonpoison_rwlock, sync_nonpoison)]
+
+use std::sync::{Arc, nonpoison::RwLock};
+use std::sync::mpsc::{Receiver, Sender};
 use std::time::{Duration, Instant};
 
 use aerospace_rocketry_lib::geospatial::Point;
@@ -9,6 +13,9 @@ use galileo::tile_schema::TileIndex;
 use galileo::{Map, MapBuilder};
 use galileo_egui::{EguiMap, EguiMapState};
 use galileo_types::geo::impls::GeoPoint2d;
+use log::info;
+use reqwest::RequestBuilder;
+use serde_json::Value;
 
 const STORAGE_KEY: &str = "archer_ground_station";
 
@@ -20,11 +27,19 @@ struct AppStorage {
 
 struct ArcherGroundStation {
     map_info: MapInfo,
+
+    sender: Sender<RequestBuilder>,
+
+    status: Arc<RwLock<SharedStatus>>,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct SharedStatus {
     vehicle: VehicleStatus,
     rotator: RotatorStatus,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 struct VehicleStatus {
     position: Point,
     last_packet: Instant,
@@ -45,7 +60,7 @@ struct MapInfo {
     resolution: f64,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 struct RotatorStatus {
     azimuth: f32,
     elevation: f32,
@@ -54,7 +69,7 @@ struct RotatorStatus {
 }
 
 impl ArcherGroundStation {
-    fn new(egui_map_state: EguiMapState, cc: &eframe::CreationContext<'_>) -> Self {
+    fn new(sender: Sender<RequestBuilder>, status: Arc<RwLock<SharedStatus>>, egui_map_state: EguiMapState, cc: &eframe::CreationContext<'_>) -> Self {
         cc.egui_ctx.global_style_mut(|style| {
             style.text_styles = [
                 (Heading, FontId::new(30.0, FontFamily::Proportional)),
@@ -104,8 +119,8 @@ impl ArcherGroundStation {
                 position,
                 resolution,
             },
-            vehicle: VehicleStatus::default(),
-            rotator: RotatorStatus::default(),
+            sender,
+            status,
         }
     }
 
@@ -113,12 +128,14 @@ impl ArcherGroundStation {
         ui.label(egui::RichText::new("Vehicle Status").heading());
         ui.separator();
 
-        ui.label(egui::RichText::new("Last Packet Time:").size(20.0));
-        let packet_time = egui::RichText::new(format!("{}ms", self.vehicle.last_packet.elapsed().as_millis())).monospace();
+        let vehicle_status = self.status.read().vehicle;
 
-        ui.label(if self.vehicle.last_packet.elapsed() <= Duration::from_millis(1000) {
+        ui.label(egui::RichText::new("Last Packet Time:").size(20.0));
+        let packet_time = egui::RichText::new(format!("{}ms", vehicle_status.last_packet.elapsed().as_millis())).monospace();
+
+        ui.label(if vehicle_status.last_packet.elapsed() <= Duration::from_millis(1000) {
             packet_time.color(Color32::from_rgb(110, 255, 110))
-        } else if self.vehicle.last_packet.elapsed() <= Duration::from_millis(5000) {
+        } else if vehicle_status.last_packet.elapsed() <= Duration::from_millis(5000) {
             packet_time.color(Color32::from_rgb(210, 232, 16))
         } else {
             packet_time.color(Color32::from_rgb(232, 16, 16))
@@ -127,13 +144,13 @@ impl ArcherGroundStation {
         ui.label(egui::RichText::new("Latitude/Longitude:").size(20.0));
         ui.monospace(format!(
             "{:9.4}°{}",
-            self.vehicle.position.latitude(),
-            if self.vehicle.position.latitude() >= 0.0 { "N" } else  { "S" },
+            vehicle_status.position.latitude(),
+            if vehicle_status.position.latitude() >= 0.0 { "N" } else  { "S" },
         ));
         ui.monospace(format!(
             "{:9.4}°{}",
-            self.vehicle.position.longitude(),
-            if self.vehicle.position.longitude() >= 0.0 { "E" } else  { "W" },
+            vehicle_status.position.longitude(),
+            if vehicle_status.position.longitude() >= 0.0 { "E" } else  { "W" },
         ));
 
         ui.label(egui::RichText::new("Altitude:").size(20.0));
@@ -147,10 +164,11 @@ impl ArcherGroundStation {
         ui.horizontal(|ui| {
             ui.label(egui::RichText::new("Elevation/Azimuth:").size(20.0));
             ui.add_space(10.0);
-            ui.add(egui::Checkbox::new(&mut self.rotator.manual, "Override"));
+            ui.add(egui::Checkbox::new(&mut self.status.try_write().unwrap().rotator.manual, "Override"));
         });
 
-        ui.add_enabled_ui(self.rotator.manual, |ui| {
+        let enabled = self.status.read().rotator.manual;
+        ui.add_enabled_ui(enabled, |ui| {
             let pos = Rect::from_pos(ui.cursor().min);
             let pos_verti = pos.translate([0.0, 15.0].into());
             let pos_horiz = pos.translate([15.0, 0.0].into());
@@ -159,14 +177,14 @@ impl ArcherGroundStation {
             let orig_width = ui.style_mut().spacing.slider_width;
             ui.style_mut().spacing.slider_width = 150.0;
 
-            ui.put(pos_verti, egui::Slider::new(&mut self.rotator.elevation, 0.0..=90.0)
+            ui.put(pos_verti, egui::Slider::new(&mut self.status.try_write().unwrap().rotator.elevation, 0.0..=90.0)
                 .clamping(SliderClamping::Edits)
                 .update_while_editing(false)
                 .step_by(0.1)
                 .vertical()
                 .suffix("°")
             );
-            ui.put(pos_horiz, egui::Slider::new(&mut self.rotator.azimuth, -180.0..=180.0)
+            ui.put(pos_horiz, egui::Slider::new(&mut self.status.try_write().unwrap().rotator.azimuth, -180.0..=180.0)
                 .clamping(SliderClamping::Edits)
                 .update_while_editing(false)
                 .step_by(0.1)
@@ -177,7 +195,7 @@ impl ArcherGroundStation {
         });
 
         if ui.button("Calibrate Vertical").clicked() {
-            println!("Wow calibration starting");
+            info!("requesting calibration...");
         }
     }
 }
@@ -223,13 +241,25 @@ impl eframe::App for ArcherGroundStation {
 }
 
 fn main() {
-    rlimit::increase_nofile_limit(10240).unwrap();
+    env_logger::builder()
+        .filter_level(log::LevelFilter::Warn)
+        .filter_module("archer_gui", log::LevelFilter::Debug)
+        .init();
+
+    rlimit::increase_nofile_limit(32768).unwrap();
 
     let map = create_map();
 
+    let (send, recv) = std::sync::mpsc::channel();
+    let shared_status = Arc::new(RwLock::new(SharedStatus::default()));
+
+    let internal_shared_status = Arc::clone(&shared_status);
+    std::thread::spawn(|| web_request_worker(internal_shared_status, recv));
+
     galileo_egui::InitBuilder::new(map)
-        .with_app_builder(|egui_map_state, cc| Box::new(ArcherGroundStation::new(egui_map_state, cc)))
+        .with_app_builder(|egui_map_state, cc| Box::new(ArcherGroundStation::new(send, shared_status, egui_map_state, cc)))
         .with_app_name("ARCHER Ground Station")
+        .with_logging(false)
         .init()
         .expect("failed to initialize");
 }
@@ -237,8 +267,8 @@ fn main() {
 fn create_map() -> Map {
     let osm_layer = RasterTileLayerBuilder::new_rest(move |&index: &TileIndex| {
             format!(
-                //"https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}&s=Ga",
-                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                "https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}&s=Ga",
+                //"https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 z = index.z,
                 x = index.x,
                 y = index.y
@@ -254,4 +284,19 @@ fn create_map() -> Map {
         .with_z_level(8)
         .with_layer(osm_layer)
         .build()
+}
+
+
+async fn web_request_worker(status: Arc<RwLock<SharedStatus>>, request_list: Receiver<RequestBuilder>) {
+    let client = reqwest::Client::new();
+
+    loop {
+        if let Ok(request) = request_list.recv_timeout(Duration::from_millis(200)) {
+            dbg!(client.execute(request.build().unwrap()).await.unwrap());
+        }
+
+        if let Ok(r) = client.get("http://0.0.0.0:8000/rotator/position").send().await {
+            dbg!(r.json::<Value>().await.unwrap());
+        }
+    }
 }

@@ -8,7 +8,6 @@ aerospace-rocketry-lib = { git = "https://github.com/unl-rocketry/aerospace-rock
 eframe = "0.34"
 egui = "0.34"
 egui-wgpu = "0.34.1"
-egui_glow = "0.34.1"
 env_logger = "0.11.10"
 galileo = { git = "https://github.com/galileo-map/galileo.git" }
 galileo-egui = { git = "https://github.com/galileo-map/galileo.git" }
@@ -17,3 +16,5 @@ log = "0.4.29"
 reqwest = { version = "0.13.2", features = ["blocking", "json"] }
 rlimit = "0.11.0"
 serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.150"
+tokio = { version = "1.52.3", features = ["full"] }
