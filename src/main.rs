@@ -14,7 +14,6 @@ use galileo::{Map, MapBuilder};
 use galileo_egui::{EguiMap, EguiMapState};
 use galileo_types::geo::impls::GeoPoint2d;
 use log::info;
-use reqwest::RequestBuilder;
 use serde_json::Value;
 
 const STORAGE_KEY: &str = "archer_ground_station";
@@ -28,9 +27,11 @@ struct AppStorage {
 struct ArcherGroundStation {
     map_info: MapInfo,
 
-    sender: Sender<RequestBuilder>,
-
+    sender: Sender<String>,
     status: Arc<RwLock<SharedStatus>>,
+    internal_status: Arc<RwLock<SharedStatus>>,
+
+    last_send: Arc<RwLock<Instant>>,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -69,7 +70,7 @@ struct RotatorStatus {
 }
 
 impl ArcherGroundStation {
-    fn new(sender: Sender<RequestBuilder>, status: Arc<RwLock<SharedStatus>>, egui_map_state: EguiMapState, cc: &eframe::CreationContext<'_>) -> Self {
+    fn new(sender: Sender<String>, last_send: Arc<RwLock<Instant>>, internal_status: Arc<RwLock<SharedStatus>>, status: Arc<RwLock<SharedStatus>>, egui_map_state: EguiMapState, cc: &eframe::CreationContext<'_>) -> Self {
         cc.egui_ctx.global_style_mut(|style| {
             style.text_styles = [
                 (Heading, FontId::new(30.0, FontFamily::Proportional)),
@@ -121,6 +122,8 @@ impl ArcherGroundStation {
             },
             sender,
             status,
+            internal_status,
+            last_send,
         }
     }
 
@@ -177,25 +180,41 @@ impl ArcherGroundStation {
             let orig_width = ui.style_mut().spacing.slider_width;
             ui.style_mut().spacing.slider_width = 150.0;
 
-            ui.put(pos_verti, egui::Slider::new(&mut self.status.try_write().unwrap().rotator.elevation, 0.0..=90.0)
+            ui.put(pos_verti, egui::Slider::new(&mut self.internal_status.write().rotator.elevation, 0.0..=90.0)
                 .clamping(SliderClamping::Edits)
+                .trailing_fill(true)
                 .update_while_editing(false)
                 .step_by(0.1)
                 .vertical()
                 .suffix("°")
             );
-            ui.put(pos_horiz, egui::Slider::new(&mut self.status.try_write().unwrap().rotator.azimuth, -180.0..=180.0)
+            ui.put(pos_horiz, egui::Slider::new(&mut self.internal_status.write().rotator.azimuth, -180.0..=180.0)
                 .clamping(SliderClamping::Edits)
+                .trailing_fill(true)
                 .update_while_editing(false)
                 .step_by(0.1)
                 .suffix("°")
             );
 
+            if
+                self.last_send.read().elapsed() >= Duration::from_millis(200) &&
+                (self.internal_status.read().rotator.elevation != self.status.read().rotator.elevation)
+            {
+                self.sender.send(format!("rotator/dver?degrees={}", self.internal_status.read().rotator.elevation)).unwrap();
+            }
+
+            if
+                self.last_send.read().elapsed() >= Duration::from_millis(200) &&
+                (self.internal_status.read().rotator.azimuth != self.status.read().rotator.azimuth)
+                {
+                    self.sender.send(format!("rotator/dhor?degrees={}", self.internal_status.read().rotator.azimuth)).unwrap();
+                }
+
             ui.style_mut().spacing.slider_width = orig_width;
         });
 
         if ui.button("Calibrate Vertical").clicked() {
-            info!("requesting calibration...");
+            self.sender.send("rotator/calv".to_string()).unwrap();
         }
     }
 }
@@ -252,12 +271,23 @@ fn main() {
 
     let (send, recv) = std::sync::mpsc::channel();
     let shared_status = Arc::new(RwLock::new(SharedStatus::default()));
+    let internal_status = Arc::new(RwLock::new(SharedStatus::default()));
+
+    let last_send = Arc::new(RwLock::new(Instant::now()));
 
     let internal_shared_status = Arc::clone(&shared_status);
-    std::thread::spawn(|| web_request_worker(internal_shared_status, recv));
+    let internal_last_send = Arc::clone(&last_send);
+    std::thread::spawn(|| web_request_worker(internal_shared_status, internal_last_send, recv));
 
     galileo_egui::InitBuilder::new(map)
-        .with_app_builder(|egui_map_state, cc| Box::new(ArcherGroundStation::new(send, shared_status, egui_map_state, cc)))
+        .with_app_builder(|egui_map_state, cc| Box::new(ArcherGroundStation::new(
+            send,
+            last_send,
+            internal_status,
+            shared_status,
+            egui_map_state,
+            cc
+        )))
         .with_app_name("ARCHER Ground Station")
         .with_logging(false)
         .init()
@@ -287,16 +317,27 @@ fn create_map() -> Map {
 }
 
 
-async fn web_request_worker(status: Arc<RwLock<SharedStatus>>, request_list: Receiver<RequestBuilder>) {
-    let client = reqwest::Client::new();
+fn web_request_worker(status: Arc<RwLock<SharedStatus>>, last_send: Arc<RwLock<Instant>>, request_list: Receiver<String>) {
+    let client = reqwest::blocking::Client::new();
 
     loop {
         if let Ok(request) = request_list.recv_timeout(Duration::from_millis(200)) {
-            dbg!(client.execute(request.build().unwrap()).await.unwrap());
+            client.get(format!("http://0.0.0.0:8000/{}", request))
+                .send().unwrap();
         }
 
-        if let Ok(r) = client.get("http://0.0.0.0:8000/rotator/position").send().await {
-            dbg!(r.json::<Value>().await.unwrap());
+        if let Ok(r) = client.get("http://0.0.0.0:8000/rotator/position").send() {
+            *last_send.write() = Instant::now();
+            if r.status() != 200 {
+                continue;
+            }
+
+            let r_json = dbg!(r.json::<Value>().unwrap());
+
+            status.write().rotator.azimuth = r_json["data"]["vertical"].as_f64().unwrap() as f32;
+            status.write().rotator.azimuth = r_json["data"]["horizontal"].as_f64().unwrap() as f32;
+        } else {
+            dbg!("help");
         }
     }
 }
